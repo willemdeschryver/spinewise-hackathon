@@ -4,3 +4,4 @@ dist/
 CLAUDE.local.md
 .playwright-mcp/
 recordings/
+.wrangler/

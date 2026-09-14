@@ -1,0 +1,23 @@
+# Cache rules for the deployed site. The models and the ONNX runtime are large and never
+# change, so they are worth a long cache; index.html must stay fresh so a new build is picked up.
+# Vite's own hashed files under /assets/ are immutable by construction.
+
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+  # .onnx is not a type the asset server knows, so it would arrive with no Content-Type at all.
+  Content-Type: application/octet-stream
+
+/samples/*
+  Cache-Control: public, max-age=604800
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/worklet/*
+  Cache-Control: public, max-age=3600
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

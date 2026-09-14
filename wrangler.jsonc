@@ -1,0 +1,17 @@
+{
+  // Attune is a static site: no server code, so this is an assets-only Worker (no "main").
+  // `npm run deploy` builds dist/ and uploads it.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Matches the Worker that Cloudflare Builds created from this repo. Renaming it here would
+  // deploy to a second, different Worker.
+  "name": "spinewise-hackathon",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    // One page, no client-side routing: an unknown path is a real 404, not the app.
+    "not_found_handling": "none"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
