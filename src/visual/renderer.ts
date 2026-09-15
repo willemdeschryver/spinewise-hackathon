@@ -10,7 +10,7 @@ export const palette = {
 };
 
 const UNIFORMS = [
-  'u_res', 'u_time', 'u_size', 'u_breath', 'u_split', 'u_agit', 'u_fog', 'u_grain',
+  'u_res', 'u_time', 'u_size', 'u_breath', 'u_split', 'u_agit', 'u_aurora', 'u_grain',
   'u_strain', 'u_voice', 'u_pulse', 'u_calm', 'u_warm', 'u_hot', 'u_bg',
 ] as const;
 type UniformName = (typeof UNIFORMS)[number];
@@ -79,7 +79,7 @@ export class Renderer {
     gl.uniform1f(u.u_breath, p.breath);
     gl.uniform1f(u.u_split, p.split);
     gl.uniform1f(u.u_agit, p.agit);
-    gl.uniform1f(u.u_fog, p.fog);
+    gl.uniform1f(u.u_aurora, p.aurora);
     gl.uniform1f(u.u_grain, p.grain);
     gl.uniform1f(u.u_strain, p.strain);
     gl.uniform1f(u.u_voice, p.voice);

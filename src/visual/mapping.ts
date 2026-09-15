@@ -8,7 +8,7 @@ export interface VisualParams {
   breath: number;
   split: number;
   agit: number;
-  fog: number;
+  aurora: number;
   grain: number;
   strain: number;
   voice: number;
@@ -20,10 +20,11 @@ const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 const alpha = (dt: number, tau: number): number => 1 - Math.exp(-dt / tau);
 
 // Maps the readings onto the organism. One reading, one visible behaviour:
-// volume is size, pace is breathing rate, overlap splits the body, noise fogs and grits it.
+// volume is size, pace is breathing rate, overlap splits the body,
+// poor clarity lights an aurora around it and grits its surface.
 export class VisualMapper {
   readonly params: VisualParams = {
-    size: cfg.sizeBase, breath: 0, split: 0, agit: 0, fog: 0, grain: 0, strain: 0, voice: 0, pulse: 0,
+    size: cfg.sizeBase, breath: 0, split: 0, agit: 0, aurora: 0, grain: 0, strain: 0, voice: 0, pulse: 0,
   };
   private phase = 0;
   private pulse = 0;
@@ -74,7 +75,7 @@ export class VisualMapper {
     p.size += a * (sizeT - p.size);
     p.split += a * (splitT - p.split);
     p.agit += a * (agitT - p.agit);
-    p.fog += a * (noise01 - p.fog);
+    p.aurora += a * (noise01 - p.aurora);
     p.grain += a * (grainT - p.grain);
     p.strain += a * (strain - p.strain);
     p.voice += a * (voice - p.voice);

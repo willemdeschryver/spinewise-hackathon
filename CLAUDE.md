@@ -67,10 +67,10 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   thresholds; it is much faster than listening.
 - `src/visual/mapping.ts`: readings to shader uniforms, with smoothing. One
   reading, one visible behaviour: volume is size, pace is breathing rate,
-  overlap splits the body, noise fogs and grits it, strain shifts the colour
-  from mint to amber to red.
+  overlap splits the body, poor clarity lights an aurora around it and grits its
+  surface, strain shifts the colour from mint to amber to red.
 - `src/visual/organism.frag`: the whole picture is one fullscreen fragment
-  shader (simplex fbm, smooth-min of two lobes, fog, grain, vignette).
+  shader (simplex fbm, smooth-min of two lobes, radial aurora, grain, vignette).
 - `src/ui/overlay.ts`: status line, source menu, edge blocks, start screen. One
   block per screen edge, each turned to face that edge so a tablet flat on the table
   reads from every seat. A block shows the action cue (`src/ui/cue.ts`: the worst

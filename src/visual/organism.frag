@@ -9,7 +9,7 @@ uniform float u_size;     // radius as a fraction of the short screen axis
 uniform float u_breath;   // -1..1, already scaled by pace
 uniform float u_split;    // 0..1 two lobes pulling apart (people talking over each other)
 uniform float u_agit;     // 0..1 edge turbulence
-uniform float u_fog;      // 0..1 background noise as fog
+uniform float u_aurora;   // 0..1 poor clarity as an aurora around the body
 uniform float u_grain;    // 0..1 surface grit
 uniform float u_strain;   // 0..1 overall colour shift
 uniform float u_voice;    // 0..1 someone is speaking
@@ -112,13 +112,35 @@ void main() {
   vec3 col = u_bg;
   col += tint * halo * (0.7 + 0.3 * u_voice);
 
-  // Background noise becomes fog that washes over everything, the body included.
-  float fn = fbm(uv * 1.6 + vec2(t * 0.03, -t * 0.02)) * 0.5 + 0.5;
-  float fog = u_fog * smoothstep(0.3, 0.95, fn);
-  vec3 fogCol = mix(tint, vec3(0.55, 0.58, 0.62), 0.7);
-  col += fogCol * fog * 0.35;
-  vec3 bodyOut = mix(bodyCol, fogCol * 0.6, fog * 0.6);
-  col = mix(col, bodyOut, body);
+  // Poor clarity lights an aurora: curtains of light that hang around the body and
+  // radiate outward, so a tablet flat on the table reads the same from every seat.
+  // A clear room keeps the sky dark and still; the worse it gets, the wider, faster
+  // and brighter the curtains, so the bad state is the one that draws the eye.
+  float aur = 0.0;
+  vec3 aurCol = tint;
+  if (u_aurora > 0.002) {
+    float rad = length(p);
+    vec2 ring = p / max(rad, 1e-4);
+    float sp = 0.5 + 1.5 * u_aurora;
+    float away = outside / r;
+    // Where the curtain hangs around the circle, drifting slowly; wider when it is bad.
+    float c1 = snoise(ring * 2.0 + vec2(t * 0.06 * sp, 0.0));
+    float c2 = snoise(ring * 5.0 + away * 1.2 + vec2(-t * 0.11 * sp, 4.0));
+    float lo = 0.35 - 0.55 * u_aurora;
+    float curtain = smoothstep(lo, 0.9, 0.55 * c1 + 0.45 * c2);
+    // Rays along the radius, folded like a curtain, shimmering faster as clarity drops.
+    float ry = snoise(ring * 11.0 + away * 0.8 + vec2(t * 0.35 * sp, -t * 0.2 * sp));
+    float fold = snoise(ring * 3.5 + away * 2.2 + vec2(-t * 0.15 * sp, 8.0));
+    float rays = (0.55 + 0.45 * smoothstep(-0.6, 0.8, ry)) * (0.65 + 0.35 * fold);
+    // Sits just outside the body and fades with distance, reaching further when it is bad.
+    float reach = exp(-away / (0.5 + 1.6 * u_aurora));
+    aur = u_aurora * curtain * rays * reach;
+    // The strain colour at the foot, violet at the top, like the real thing.
+    aurCol = mix(tint, mix(tint, vec3(0.55, 0.3, 0.95), 0.55), smoothstep(0.1, 1.6, away));
+  }
+  col += aurCol * aur * 1.1;
+  bodyCol += aurCol * rim * aur * 0.5;
+  col = mix(col, bodyCol, body);
 
   // Grain: fine film grain everywhere, coarse grit on the body when the room is noisy.
   float g = hash(gl_FragCoord.xy + fract(t) * vec2(97.0, 311.0)) - 0.5;

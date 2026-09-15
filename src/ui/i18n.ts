@@ -129,8 +129,8 @@ const tour: Record<Lang, TourStep[]> = {
       control: 'voices', low: 'one at a time', high: 'everyone at once', pose: 0.85,
     },
     {
-      title: 'Noise fogs it over',
-      text: 'Background noise that masks the speech fogs the body and grits its surface. Only noise inside the speech band counts: ventilation, traffic and a laptop fan stay invisible until they cover words. Whatever the cause, the colour moves from mint to amber to red as the room gets harder.',
+      title: 'Noise lights an aurora',
+      text: 'When background noise masks the speech, an aurora lights up around the body and its surface goes gritty. The clearer the room, the darker and stiller the sky around it. Only noise inside the speech band counts: ventilation, traffic and a laptop fan stay invisible until they cover words. Whatever the cause, the colour moves from mint to amber to red as the room gets harder.',
       control: 'noise', low: 'clear', high: 'very noisy', pose: 0.85,
     },
     {
@@ -173,8 +173,8 @@ const tour: Record<Lang, TourStep[]> = {
       control: 'voices', low: 'om de beurt', high: 'iedereen tegelijk', pose: 0.85,
     },
     {
-      title: 'Lawaai maakt haar mistig',
-      text: 'Achtergrondlawaai dat de spraak overstemt, maakt het lichaam mistig en korrelig. Alleen lawaai in de spraakband telt: ventilatie, verkeer en een laptopventilator blijven onzichtbaar tot ze woorden bedekken. Wat de oorzaak ook is, de kleur schuift van mint naar oranje naar rood naarmate de ruimte lastiger wordt.',
+      title: 'Lawaai ontsteekt een noorderlicht',
+      text: 'Als achtergrondlawaai de spraak overstemt, licht er een noorderlicht op rond het lichaam en wordt het oppervlak korrelig. Hoe helderder de ruimte, hoe donkerder en stiller de lucht eromheen. Alleen lawaai in de spraakband telt: ventilatie, verkeer en een laptopventilator blijven onzichtbaar tot ze woorden bedekken. Wat de oorzaak ook is, de kleur schuift van mint naar oranje naar rood naarmate de ruimte lastiger wordt.',
       control: 'noise', low: 'helder', high: 'veel lawaai', pose: 0.85,
     },
     {
