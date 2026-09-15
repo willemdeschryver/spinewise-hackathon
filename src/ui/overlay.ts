@@ -70,6 +70,7 @@ export class Overlay {
   private recordSeconds: number | null = null;
   private live = false;          // a source has started
   private tourStep: number | null = null;
+  private tourLive = false;           // the step's reading follows the microphone, not the slider
 
   constructor(private readonly h: OverlayHandlers) {
     initLang();
@@ -137,6 +138,7 @@ export class Overlay {
       else this.endTour();
     });
     this.tourRange.addEventListener('input', () => this.pose());
+    $('#btn-tour-live').addEventListener('click', () => this.setTourLive(!this.tourLive));
     const tryButtons = $('#tour-sample-buttons');
     for (const s of SAMPLES) {
       const b = document.createElement('button');
@@ -192,6 +194,7 @@ export class Overlay {
     if (this.tourStep === null) return;
     this.tourStep = null;
     this.tour.hidden = true;
+    this.setTourLive(false);
     cfg.sim.on = false;
     if (!this.live) {
       this.start.hidden = false;
@@ -217,6 +220,7 @@ export class Overlay {
       $('#tour-high').textContent = step.high ?? '';
       this.tourRange.min = step.control === 'volume' ? '-1' : '0';
       if (!keepSlider) this.tourRange.value = String(step.pose ?? 0);
+      this.renderTourLive();
     }
 
     const terms = $('#tour-terms');
@@ -231,6 +235,34 @@ export class Overlay {
     }
     $('#tour-samples').hidden = !step.samples;
     this.pose();
+  }
+
+  // Live input for the step: the reading under test comes from the room instead of the
+  // slider, which then just shows it. The other readings stay at rest, so what the visitor
+  // does (talk louder, clap, talk over someone) shows up in exactly one behaviour.
+  private setTourLive(on: boolean): void {
+    if (on === this.tourLive) return;
+    this.tourLive = on;
+    this.renderTourLive();
+    if (on && !this.live) this.h.onMic();
+    this.pose();
+  }
+
+  private renderTourLive(): void {
+    const b = $('#btn-tour-live');
+    b.setAttribute('aria-pressed', String(this.tourLive));
+    b.textContent = this.tourLive ? t('tourSlider') : t('tourLive');
+    this.tourRange.disabled = this.tourLive;
+  }
+
+  private liveValue(m: Metrics, control: TourStep['control']): number {
+    switch (control) {
+      case 'volume': return m.volume;
+      case 'pace': return m.pace;
+      case 'voices': return m.voices;
+      case 'noise': return Math.max(m.noise, m.snrBad);
+      default: return 0;
+    }
   }
 
   // Hand the organism the pose for the current step: one reading at the slider, the rest at rest.
@@ -317,6 +349,14 @@ export class Overlay {
   tick(real: Metrics, dt: number): void {
     this.acc += dt;
     if (this.acc < 0.12) return;
+    if (this.tourStep !== null && this.tourLive) {
+      const step = tourSteps()[this.tourStep];
+      if (step.control) {
+        this.tourRange.value = this.liveValue(real, step.control).toFixed(3);
+        this.pose();
+        cfg.sim.voice = real.voice;
+      }
+    }
     const m = cfg.sim.on ? this.posed(real) : real;
     const cue = this.picker.pick(m, this.acc);
     this.acc = 0;

@@ -62,10 +62,19 @@ export const cfg = {
   noiseLoudDb: -10,
   // Broadband: the whole floor relative to the room's normal speech level. Rumble from traffic,
   // ventilation or a fan masks no word but still tires a listener (and a hearing aid amplifies
-  // it), so it counts too. The same fine room sits about 17 dB under; a fan 9 dB under
-  // reads "noisy" and asks the table for less background noise.
-  noiseWideQuietDb: -15,
-  noiseWideLoudDb: -5,
+  // it), so it counts too, with more headroom so a fine room (about 17 dB under in the
+  // 2026-09-14 recordings) stays well clear of it.
+  noiseWideQuietDb: -13,
+  noiseWideLoudDb: -4,
+  // Sudden noise: a clap, a door, a dropped cup. Nothing short ever reaches the floor, so a
+  // burst is a frame that jumps well above the recent level (summed over two frames, since a
+  // clap often straddles a frame edge), flat in spectrum and without a pitch. Each burst adds
+  // `burstGain` to the reading, which then decays over `burstReleaseSec`.
+  burstJumpDb: 10,
+  burstFlatnessMin: 0.2,
+  burstClarityMax: 0.4,
+  burstGain: 0.45,
+  burstReleaseSec: 2.5,
   snrGood: 18,
   snrBad: 8,
 

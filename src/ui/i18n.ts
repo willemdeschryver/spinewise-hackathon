@@ -17,6 +17,8 @@ const dict = {
   tourDone: ['Done', 'Klaar'],
   tourStep: ['{n} of {total}', '{n} van {total}'],
   tourTry: ['Try a clip', 'Probeer een fragment'],
+  tourLive: ['Try it live', 'Probeer het live'],
+  tourSlider: ['Back to the slider', 'Terug naar de schuif'],
   notListeningYet: ['Not listening yet', 'Luistert nog niet'],
   notListening: ['Not listening', 'Luistert niet'],
   askingMic: ['Asking for the microphone', 'Microfoon aanvragen'],
@@ -79,6 +81,7 @@ const dict = {
   'masking speech': ['masking speech', 'overstemt de spraak'],
   'clear': ['clear', 'helder'],
   'some noise': ['some noise', 'wat lawaai'],
+  'sudden noise': ['sudden noise', 'plots lawaai'],
   'noisy': ['noisy', 'lawaaierig'],
   'very noisy': ['very noisy', 'veel lawaai'],
   // Sample clips, keyed by id.

@@ -138,7 +138,7 @@ const overlay = new Overlay({
 const tuneHost = document.getElementById('tune') as HTMLElement;
 const live: Live = {
   level: -90, noiseFloor: -90, speechFloor: -90, speechPeak: -90, speechLevel: -90, vad: 0, rate: 0, clarity: 0, overlap: 0, speakers: 0,
-  segMs: 0, f0: 0, second: 0, fill: 0, strain: 0,
+  segMs: 0, f0: 0, second: 0, fill: 0, burst: 0, strain: 0,
 };
 const pane = createTunePane(tuneHost, live, {
   calibrateQuiet: () => sendA({ type: 'calibrateQuiet' }),
@@ -180,6 +180,7 @@ const frame = (now: number): void => {
   live.f0 = metrics.f0;
   live.second = metrics.second;
   live.fill = metrics.fill;
+  live.burst = metrics.burst;
   live.strain = metrics.strain;
   requestAnimationFrame(frame);
 };

@@ -17,6 +17,7 @@ export interface Live {
   f0: number;
   second: number;
   fill: number;
+  burst: number;
   strain: number;
 }
 
@@ -47,6 +48,7 @@ export function createTunePane(container: HTMLElement, live: Live, actions: Tune
   graph('f0', 0, 400);
   graph('second', 0, 1);
   graph('fill', 0, 1);
+  graph('burst', 0, 1);
   graph('strain', 0, 1);
 
   const cal = pane.addFolder({ title: 'Calibrate' });
@@ -68,6 +70,11 @@ export function createTunePane(container: HTMLElement, live: Live, actions: Tune
   vol.addBinding(cfg, 'noiseLoudDb', { min: -30, max: 5, step: 1 });
   vol.addBinding(cfg, 'noiseWideQuietDb', { min: -40, max: 0, step: 1 });
   vol.addBinding(cfg, 'noiseWideLoudDb', { min: -30, max: 10, step: 1 });
+  vol.addBinding(cfg, 'burstJumpDb', { min: 4, max: 30, step: 1 });
+  vol.addBinding(cfg, 'burstFlatnessMin', { min: 0, max: 1, step: 0.05 });
+  vol.addBinding(cfg, 'burstClarityMax', { min: 0, max: 1, step: 0.05 });
+  vol.addBinding(cfg, 'burstGain', { min: 0.1, max: 1, step: 0.05 });
+  vol.addBinding(cfg, 'burstReleaseSec', { min: 0.5, max: 8, step: 0.5 });
   vol.addBinding(cfg, 'snrGood', { min: 5, max: 40, step: 1 });
   vol.addBinding(cfg, 'snrBad', { min: 0, max: 20, step: 1 });
   vol.addBinding(cfg, 'floorWindowSec', { min: 3, max: 40, step: 1 });

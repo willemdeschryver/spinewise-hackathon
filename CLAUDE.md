@@ -13,6 +13,8 @@ No backend. Static site, works on a laptop, a tablet on the table, or a projecto
 - `npm install`, then `npm run dev` and open http://localhost:5173
 - `npm run dev:lan` serves over https on the LAN so a phone or tablet can use its mic
 - `npm run build` type-checks and writes `dist/` (deploy anywhere static)
+- `/present.html` is the pitch deck (Dutch). Arrows or space step through it, `f`
+  fullscreen, `h` hides the header, `#n` in the URL jumps to a slide.
 - `npm run samples` regenerates `public/samples/*.wav` (Windows only: uses the
   built-in speech engine, then `scripts/make-samples.mjs` mixes the clips)
 
@@ -55,7 +57,13 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   headroom (`noiseWideQuietDb`), so traffic rumble, ventilation and a fan still
   register as tiring even though they hide no word. A laptop mic across the
   table reads a fine room as "clear" on both (about 18 dB and 17 dB of headroom
-  in the 2026-09-14 recordings).
+  in the 2026-09-14 recordings). Sudden noise (a clap, a door) never reaches a
+  floor, so `burst` counts frames that jump well above the recent level (over
+  two frames), flat and unpitched, each adding `burstGain` and decaying over
+  `burstReleaseSec`; the reading is the worst of the three and the status says
+  "sudden noise" while bursts dominate. "The room is quiet now" (Tune panel)
+  resets the floors and shifts both floor terms so the room as it sounds right
+  now reads clear; only a rise from there counts.
   Syllable rate = peaks of the intensity contour (2 dB dips, pitched frames,
   while speech is on), smoothed over `paceSmoothSec`. Overlap = the model's
   overlap share, attack 0.5 s, release 1.5 s. Without the models (load failure)
@@ -83,13 +91,18 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
 - `src/ui/i18n.ts`: every visible word in English and Dutch, plus the guided tour
   ("How it works", key `?`): seven steps beside the live organism, each posing it by
   hand through `cfg.sim` with a slider for one reading (volume, pace, voices, noise)
-  so the visitor sees what that reading changes; the last step explains the sources
-  with "try a clip" buttons. While `cfg.sim.on`, the overlay feeds the cue and the
+  so the visitor sees what that reading changes, or "Try it live", which starts the
+  mic if needed and feeds that one reading from the room while the others stay at
+  rest; the last step explains the sources with "try a clip" buttons. While `cfg.sim.on`, the overlay feeds the cue and the
   bars from the pose (`statusWords` in `metrics.ts`), not from the audio.
   Language comes from localStorage, else the browser, switched live with the EN/NL
   buttons in the header. Status words leave the worker in English and are looked
   up in the overlay, so the worker and the harness never see a language. The Tune
   panel stays English.
+- `src/present.ts` (+ `present.html`, `present.css`): the pitch deck, a second Vite
+  page. Same renderer, mapper, stylesheet and words as the app; each slide poses the
+  organism through `cfg.sim` like the tour does and sets the bottom strip (cue, bars)
+  by hand. Slide text lives in `SLIDES` there. No audio, no workers.
 - `src/ui/tune.ts`: Tweakpane panel. Live graphs (including `vad`, `speakers`,
   `segMs` inference time), calibration buttons, every threshold from
   `src/config.ts`, and "Drive by hand" to pose the organism without audio. Any

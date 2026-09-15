@@ -210,7 +210,22 @@ button:focus-visible, input:focus-visible {
   margin: 0;
   accent-color: var(--calm);
   cursor: pointer;
+  transition: opacity 0.3s;
 }
+.tour-control input[type='range']:disabled { opacity: 0.45; cursor: default; }
+/* Live input for the step's reading, in place of the slider. */
+.tour-live {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.tour-live:hover { border-color: rgba(255, 255, 255, 0.45); }
+.tour-live[aria-pressed='true'] { background: var(--calm); color: #05110f; border-color: transparent; }
 .tour-terms p { padding-left: 14px; margin: 0 0 8px; font-size: 14px; }
 .tour-terms b { color: var(--ink); font-weight: 600; }
 .tour-samples .menu-group { padding: 8px 0 4px; }

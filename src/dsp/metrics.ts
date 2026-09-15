@@ -30,6 +30,7 @@ export interface Metrics {
   rangeRef: number;     // what that spread looks like for one voice in this room (adaptive)
   fill: number;         // 0..1 the pauses between syllables are being filled by another voice
   floorSpread: number;  // dB spread of the quiet frames over the last 2 s (steady noise is tight)
+  burst: number;        // 0..1 sudden noises lately (claps, doors), decaying between them
 
   volume: number;       // -1..1, negative is too quiet, positive too loud
   pace: number;         // 0..1 problem score
@@ -60,6 +61,7 @@ const GATED = 1e9;
 
 export interface StatusInputs {
   recent: boolean; warmingUp: boolean; volume: number; pace: number; rate: number; byRun: boolean; voices: number; noise: number; snrBad: number;
+  burst?: number;
 }
 
 // The sentence-case words in the readings strip. Pure, so the guided tour can pose them.
@@ -81,6 +83,7 @@ export const statusWords = (s: StatusInputs): Metrics['status'] => ({
     : 'talking over each other',
   noise: s.warmingUp ? 'listening'
     : s.recent && s.snrBad > 0.6 ? 'masking speech'
+    : (s.burst ?? 0) >= 0.25 && (s.burst ?? 0) >= s.noise - 0.05 ? 'sudden noise'
     : s.noise < 0.25 ? 'clear'
     : s.noise < 0.5 ? 'some noise'
     : s.noise < 0.75 ? 'noisy'
@@ -108,6 +111,12 @@ export class MetricsTracker {
   private rising = false;
 
   private level = -80;
+  private slowLevel = -80;   // follows the level up at once and down over 0.4 s
+  private burst = 0;
+  private sinceBurst = 9;
+  private prevJump = 0;
+  private wideOffset = 0;    // dB the room's own floor sits above the "clear" line, from "the room is quiet now"
+  private bandOffset = 0;
   private speechLevel = -30;
   private speechRef = -30;
   private refSec = 0;
@@ -179,7 +188,7 @@ export class MetricsTracker {
     return {
       level: -80, speechLevel: -80, speechRef: -30, noiseFloor: -80, speechFloor: -80, speechPeak: -80, snr: 0, voice: 0, sinceVoice: 99, vad: 0,
       rate: 0, run: 0, overlap: 0, speakers: 0, segAge: 99, segMs: 0, neural: false,
-      f0: 0, clarity: 0, entropy: 0, second: 0, envRange: 0, rangeRef: 0, fill: 0, floorSpread: 0,
+      f0: 0, clarity: 0, entropy: 0, second: 0, envRange: 0, rangeRef: 0, fill: 0, floorSpread: 0, burst: 0,
       volume: 0, pace: 0, voices: 0, noise: 0, snrBad: 0, strain: 0,
       status: { volume: 'listening', pace: 'listening', voices: 'listening', noise: 'listening' },
     };
@@ -198,6 +207,11 @@ export class MetricsTracker {
     this.histLen = this.floorN;
     this.noiseFloor = this.level;
     this.speechFloor = this.env;
+    this.burst = 0;
+    // The room as it sounds right now is what "clear" looks like here: the two noise terms
+    // are shifted so they read zero now, and only a rise from here counts.
+    this.wideOffset = Math.max(0, this.noiseFloor - this.speechRef - cfg.noiseWideQuietDb);
+    this.bandOffset = Math.max(0, this.speechFloor - this.speechBandRef - cfg.noiseQuietDb);
   }
 
   // Someone is speaking at a comfortable level from where the device sits: make that the
@@ -233,6 +247,22 @@ export class MetricsTracker {
 
     // Envelopes
     this.level += (f.levelDb > this.level ? alpha(dt, 0.02) : alpha(dt, 0.25)) * (f.levelDb - this.level);
+
+    // Sudden noise: a frame that jumps well above the recent level, flat in spectrum and
+    // without a pitch. Speech onsets are pitched or too small a step; a clap is neither. A
+    // clap often straddles a frame edge (the first frame has the jump, the second the flat
+    // spectrum), so the jump counts over two frames.
+    const jump = f.levelDb - this.slowLevel;
+    const rise = Math.max(jump, jump + Math.max(this.prevJump, 0));
+    this.prevJump = jump;
+    this.slowLevel += (f.levelDb > this.slowLevel ? alpha(dt, 0.03) : alpha(dt, 0.4)) * (f.levelDb - this.slowLevel);
+    this.sinceBurst += dt;
+    if (!warmingUp && rise > cfg.burstJumpDb && f.flatness > cfg.burstFlatnessMin && f.clarity < cfg.burstClarityMax
+        && f.levelDb > this.noiseFloor + 15 && this.sinceBurst > 0.15) {
+      this.burst = Math.min(1, this.burst + cfg.burstGain);
+      this.sinceBurst = 0;
+    }
+    this.burst *= Math.exp(-dt / cfg.burstReleaseSec);
 
     // Floors: a low percentile of recent frames that carry no voice: frames without a clear
     // pitch (pauses, consonants, most noise), or frames the model is sure hold no speech and
@@ -431,15 +461,15 @@ export class MetricsTracker {
     // Noise inside the speech band is what masks words. Rumble from traffic, ventilation or a fan
     // lives mostly below 300 Hz and masks nothing, but it still tires a listener, so the broadband
     // floor counts as well, judged with more headroom. The worse of the two is the reading.
-    const noiseBand = rampUp(this.speechFloor - this.speechBandRef, cfg.noiseQuietDb, cfg.noiseLoudDb);
-    const noiseWide = rampUp(this.noiseFloor - this.speechRef, cfg.noiseWideQuietDb, cfg.noiseWideLoudDb);
-    const noise = warmingUp ? 0 : Math.max(noiseBand, noiseWide);
+    const noiseBand = rampUp(this.speechFloor - this.speechBandRef - this.bandOffset, cfg.noiseQuietDb, cfg.noiseLoudDb);
+    const noiseWide = rampUp(this.noiseFloor - this.speechRef - this.wideOffset, cfg.noiseWideQuietDb, cfg.noiseWideLoudDb);
+    const noise = warmingUp ? 0 : Math.max(noiseBand, noiseWide, this.burst);
     const snr = this.speechPeak - this.speechFloor;
     const snrBad = recent ? rampDown(snr, cfg.snrGood, cfg.snrBad) : 0;
     const strainRaw = 1 - (1 - 0.7 * Math.max(quiet01, loud01)) * (1 - 0.8 * pace) * (1 - voices) * (1 - 0.8 * noise) * (1 - 0.6 * snrBad);
     this.strain += alpha(dt, 1.2) * (strainRaw - this.strain);
 
-    const status = statusWords({ recent, warmingUp, volume, pace, rate: this.rate, byRun: paceRun > paceRate, voices, noise, snrBad });
+    const status = statusWords({ recent, warmingUp, volume, pace, rate: this.rate, byRun: paceRun > paceRate, voices, noise, snrBad, burst: this.burst });
 
     this.last = {
       level: this.level, speechLevel: this.speechLevel, speechRef: this.speechRef, noiseFloor: this.noiseFloor, speechFloor: this.speechFloor, speechPeak: this.speechPeak, snr,
@@ -447,7 +477,7 @@ export class MetricsTracker {
       overlap: this.overlap, speakers: this.speakers,
       segAge: this.seg ? this.t - this.segAt : 99, segMs: this.seg?.ms ?? 0, neural: this.hasVad && segFresh,
       f0: f.f0, clarity: f.clarity, entropy: f.entropy, second: f.second, envRange: this.envRange,
-      rangeRef: this.rangeRef, fill: this.fill, floorSpread: this.floorSpread,
+      rangeRef: this.rangeRef, fill: this.fill, floorSpread: this.floorSpread, burst: this.burst,
       volume, pace, voices, noise, snrBad, strain: this.strain, status,
     };
     return this.last;
