@@ -22,6 +22,11 @@ export interface OverlayHandlers {
 }
 
 type Key = 'volume' | 'pace' | 'voices' | 'noise';
+type Side = 'bottom' | 'top' | 'left' | 'right';
+
+const KEYS: Key[] = ['volume', 'pace', 'voices', 'noise'];
+const LABELS: Record<Key, string> = { volume: 'Volume', pace: 'Pace', voices: 'Voices', noise: 'Background' };
+const SIDES: Side[] = ['bottom', 'top', 'left', 'right'];
 
 const $ = <T extends HTMLElement>(sel: string): T => {
   const el = document.querySelector<T>(sel);
@@ -30,6 +35,8 @@ const $ = <T extends HTMLElement>(sel: string): T => {
 };
 
 // The typographic chrome around the organism: status line, source menu, the four readings.
+// The readings are drawn four times, once per screen edge and turned to face it, so a
+// tablet lying flat on the table reads correctly from every seat.
 export class Overlay {
   private readonly status = $('#status');
   private readonly start = $('#start');
@@ -40,16 +47,29 @@ export class Overlay {
   private readonly fileInput = $<HTMLInputElement>('#file');
   private readonly recordButton = $<HTMLButtonElement>('#btn-record');
   private readonly recordLabel = $<HTMLInputElement>('#rec-label');
-  private readonly cells: Record<Key, { value: HTMLElement; bar: HTMLElement }>;
+  private readonly cells: Record<Key, { value: HTMLElement; bar: HTMLElement }[]>;
   private acc = 0;
   private tuneOpen = false;
   private recordShown = -1;
 
   constructor(private readonly h: OverlayHandlers) {
-    this.cells = {} as Record<Key, { value: HTMLElement; bar: HTMLElement }>;
-    for (const k of ['volume', 'pace', 'voices', 'noise'] as Key[]) {
-      const cell = $(`.reading[data-k="${k}"]`);
-      this.cells[k] = { value: cell.querySelector('.value')!, bar: cell.querySelector('.bar')! };
+    this.cells = { volume: [], pace: [], voices: [], noise: [] };
+    for (const side of SIDES) {
+      const strip = document.createElement('section');
+      strip.className = 'readings';
+      strip.dataset.side = side;
+      strip.setAttribute('aria-label', 'Room readings');
+      if (side !== 'bottom') strip.setAttribute('aria-hidden', 'true');
+      for (const k of KEYS) {
+        const cell = document.createElement('div');
+        cell.className = 'reading';
+        cell.dataset.k = k;
+        cell.innerHTML = '<span class="label"></span><span class="value">listening</span><span class="bar"></span>';
+        cell.querySelector('.label')!.textContent = LABELS[k];
+        this.cells[k].push({ value: cell.querySelector('.value')!, bar: cell.querySelector('.bar')! });
+        strip.appendChild(cell);
+      }
+      this.readings.appendChild(strip);
     }
 
     $('#btn-mic').addEventListener('click', () => h.onMic());
@@ -145,8 +165,10 @@ export class Overlay {
   }
 
   private set(k: Key, text: string, severity: number): void {
-    const c = this.cells[k];
-    if (c.value.textContent !== text) c.value.textContent = text;
-    c.bar.style.setProperty('--sev', severity.toFixed(3));
+    const sev = severity.toFixed(3);
+    for (const c of this.cells[k]) {
+      if (c.value.textContent !== text) c.value.textContent = text;
+      c.bar.style.setProperty('--sev', sev);
+    }
   }
 }

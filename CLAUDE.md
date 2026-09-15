@@ -71,7 +71,9 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   from mint to amber to red.
 - `src/visual/organism.frag`: the whole picture is one fullscreen fragment
   shader (simplex fbm, smooth-min of two lobes, fog, grain, vignette).
-- `src/ui/overlay.ts`: status line, source menu, readings strip, start screen.
+- `src/ui/overlay.ts`: status line, source menu, readings, start screen. The four
+  readings are bar charts drawn once per screen edge, each turned to face that edge,
+  so a tablet flat on the table reads from every seat.
 - `src/ui/tune.ts`: Tweakpane panel. Live graphs (including `vad`, `speakers`,
   `segMs` inference time), calibration buttons, every threshold from
   `src/config.ts`, and "Drive by hand" to pose the organism without audio. Any

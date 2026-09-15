@@ -6,6 +6,8 @@
   --calm: #6bdcc8;
   --warm: #f5a43a;
   --hot: #d93e34;
+  /* Inset for the header and the top/bottom strips, clearing the side strips. */
+  --edge: 112px;
   color-scheme: dark;
   font-family: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 15px;
@@ -55,7 +57,7 @@ button:focus-visible, input:focus-visible {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 18px 28px;
+  padding: 18px var(--edge);
   font-size: 14px;
   transition: opacity 0.4s;
 }
@@ -134,34 +136,70 @@ button:focus-visible, input:focus-visible {
 .menu-record input::placeholder { color: var(--muted); }
 #btn-record.recording { color: var(--hot); }
 
+.readings-all {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+/* One strip per screen edge. Each is laid out as a bottom strip of width
+   --len, then turned to face its own edge (text "up" points to the centre). */
 .readings {
   position: fixed;
   left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0;
+  width: var(--len);
   display: flex;
-  gap: 36px;
-  padding: 0 28px 24px;
-  flex-wrap: wrap;
-  transition: opacity 0.4s;
+  gap: 20px;
+  padding: 12px 24px 20px;
+  transform-origin: 0 0;
 }
+.readings[data-side='bottom'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(100vh) translateY(-100%); }
+.readings[data-side='top'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(48px) rotate(180deg) translate(-100%, -100%); }
+.readings[data-side='left'] { --len: 100vh; transform: rotate(90deg) translateY(-100%); }
+.readings[data-side='right'] { --len: 100vh; transform: translate(100vw, 100vh) rotate(-90deg) translateY(-100%); }
+
 .reading {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 6px 12px;
-  align-items: baseline;
-  flex: 1 1 180px;
-  max-width: 280px;
+  gap: 3px;
+  flex: 1 1 0;
+  min-width: 0;
   transition: opacity 0.6s;
 }
-.reading .label { color: var(--muted); font-size: 13px; }
-.reading .value { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.reading .bar {
-  grid-column: 1 / -1;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 1px;
+.reading .label {
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.reading .value {
+  font-size: 17px;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reading .bar {
+  margin-top: 4px;
+  position: relative;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+/* Scale ticks at thirds, so a half-full bar reads as a number, not a mood. */
+.reading .bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / 3 - 1px),
+    rgba(5, 8, 16, 0.9) calc(100% / 3 - 1px),
+    rgba(5, 8, 16, 0.9) calc(100% / 3)
+  );
+  z-index: 1;
 }
 .reading .bar::after {
   content: '';
@@ -173,7 +211,7 @@ button:focus-visible, input:focus-visible {
   background: color-mix(in oklab, var(--calm), var(--hot) calc(var(--sev, 0) * 100%));
   transition: transform 0.25s ease, background 0.4s;
 }
-.readings.idle .reading { opacity: 0.45; }
+.readings-all.idle .reading { opacity: 0.45; }
 
 .start {
   position: fixed;
@@ -244,15 +282,25 @@ button:focus-visible, input:focus-visible {
   --tp-container-foreground-color: #d6dee3;
 }
 
-body.bare .top, body.bare .readings, body.bare .tune, body.bare .menu {
+body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu {
   opacity: 0;
   pointer-events: none;
 }
 
+/* Four readings on a short axis: smaller value type so the long statuses still fit. */
+@media (max-height: 900px) {
+  .readings[data-side='left'] .value, .readings[data-side='right'] .value { font-size: 14px; }
+}
+@media (max-width: 1100px) {
+  .readings[data-side='top'] .value, .readings[data-side='bottom'] .value { font-size: 14px; }
+}
+
 @media (max-width: 640px) {
-  .top { padding: 14px 16px; }
-  .readings { gap: 16px 24px; padding: 0 16px 16px; }
-  .reading { flex-basis: 140px; }
+  :root { --edge: 16px; }
+  .top { padding: 14px var(--edge); }
+  .readings { gap: 14px; padding: 8px var(--edge) 14px; }
+  .readings[data-side='left'], .readings[data-side='right'] { display: none; }
+  .reading .value { font-size: 15px; }
   .start-inner { left: 16px; right: 16px; bottom: 24px; padding-right: 0; }
   .start h1 { font-size: 26px; }
   .menu, .tune { right: 12px; left: 12px; width: auto; }
