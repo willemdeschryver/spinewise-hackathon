@@ -77,8 +77,12 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   reading above 0.5 becomes "Slow down a little", "One at a time", ..., with
   hysteresis and a 3 s hold) and, when "Show the readings as bars" is on (key `c`,
   remembered in localStorage), the four readings as bar charts.
-- `src/ui/i18n.ts`: every visible word in English and Dutch, plus the onboarding
-  guide (what the organism shows, what each source does, the four readings, keys).
+- `src/ui/i18n.ts`: every visible word in English and Dutch, plus the guided tour
+  ("How it works", key `?`): seven steps beside the live organism, each posing it by
+  hand through `cfg.sim` with a slider for one reading (volume, pace, voices, noise)
+  so the visitor sees what that reading changes; the last step explains the sources
+  with "try a clip" buttons. While `cfg.sim.on`, the overlay feeds the cue and the
+  bars from the pose (`statusWords` in `metrics.ts`), not from the audio.
   Language comes from localStorage, else the browser, switched live with the EN/NL
   buttons in the header. Status words leave the worker in English and are looked
   up in the overlay, so the worker and the harness never see a language. The Tune

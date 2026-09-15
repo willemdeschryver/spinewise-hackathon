@@ -1,6 +1,7 @@
-import type { Metrics } from '../dsp/metrics';
+import { statusWords, type Metrics } from '../dsp/metrics';
+import { cfg } from '../config';
 import { CuePicker, type CueKind } from './cue';
-import { guideSections, initLang, lang, onLang, setLang, t, tStatus, type Key, type Lang } from './i18n';
+import { initLang, lang, onLang, setLang, t, tStatus, tourSteps, type Key, type Lang, type TourStep } from './i18n';
 
 export interface Sample { id: string }
 
@@ -32,17 +33,22 @@ const $ = <T extends HTMLElement>(sel: string): T => {
   return el;
 };
 
-// The typographic chrome around the organism: status line, source menu, guide, and one
-// edge block per side of the screen, turned to face that side so a tablet lying flat on
-// the table reads correctly from every seat. Each block carries the action cue (the one
-// thing the table could do now) and, when the charts overlay is on, the four readings as
-// bars. Everything visible is in English or Dutch, switched live.
+// The typographic chrome around the organism: status line, source menu, the tour, and
+// one edge block per side of the screen, turned to face that side so a tablet lying flat
+// on the table reads correctly from every seat. Each block carries the action cue (the
+// one thing the table could do now) and, when the charts overlay is on, the four readings
+// as bars. Everything visible is in English or Dutch, switched live.
+//
+// The tour takes the organism over through cfg.sim (the same hook as "Drive by hand" in
+// the Tune panel) so the visitor can drag one reading and watch the shape, the cue and
+// the bars respond, with or without a source running.
 export class Overlay {
   private readonly status = $('#status');
   private readonly start = $('#start');
   private readonly readings = $('#readings');
   private readonly menu = $('#menu');
-  private readonly guide = $('#guide');
+  private readonly tour = $('#tour');
+  private readonly tourRange = $<HTMLInputElement>('#tour-range');
   private readonly menuButton = $<HTMLButtonElement>('#btn-source');
   private readonly tuneButton = $<HTMLButtonElement>('#btn-tune');
   private readonly fileInput = $<HTMLInputElement>('#file');
@@ -58,6 +64,8 @@ export class Overlay {
   private acc = 0;
   private tuneOpen = false;
   private recordSeconds: number | null = null;
+  private live = false;          // a source has started
+  private tourStep: number | null = null;
 
   constructor(private readonly h: OverlayHandlers) {
     initLang();
@@ -118,8 +126,20 @@ export class Overlay {
     for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open-guide]')) {
       b.addEventListener('click', () => { this.closeMenu(); this.openGuide(); });
     }
-    $('#btn-guide-close').addEventListener('click', () => this.closeGuide());
-    this.guide.addEventListener('click', (e) => { if (e.target === this.guide) this.closeGuide(); });
+    $('#btn-tour-close').addEventListener('click', () => this.endTour());
+    $('#btn-tour-back').addEventListener('click', () => this.showStep(this.tourStep! - 1));
+    $('#btn-tour-next').addEventListener('click', () => {
+      if (this.tourStep! + 1 < tourSteps().length) this.showStep(this.tourStep! + 1);
+      else this.endTour();
+    });
+    this.tourRange.addEventListener('input', () => this.pose());
+    const tryButtons = $('#tour-sample-buttons');
+    for (const s of SAMPLES) {
+      const b = document.createElement('button');
+      b.addEventListener('click', () => { this.endTour(); h.onSample(s); });
+      tryButtons.appendChild(b);
+      this.sampleButtons.push(b);
+    }
 
     document.addEventListener('click', (e) => {
       if (!this.menu.hidden && !this.menu.contains(e.target as Node) && e.target !== this.menuButton) this.closeMenu();
@@ -127,7 +147,7 @@ export class Overlay {
     document.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       switch (e.key) {
-        case 'Escape': this.closeMenu(); this.closeGuide(); break;
+        case 'Escape': this.closeMenu(); this.endTour(); break;
         case 't': this.toggleTune(); break;
         case 'h': document.body.classList.toggle('bare'); break;
         case 'c': this.setCharts(!this.chartsCheck.checked); break;
@@ -146,45 +166,91 @@ export class Overlay {
     for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) el.textContent = t(el.dataset.i18n as Key);
     for (const el of document.querySelectorAll<HTMLInputElement>('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh as Key);
     for (const b of document.querySelectorAll<HTMLButtonElement>('.lang button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang()));
-    SAMPLES.forEach((s, i) => { this.sampleButtons[i].textContent = sampleName(s); });
+    this.sampleButtons.forEach((b, i) => { b.textContent = sampleName(SAMPLES[i % SAMPLES.length]); });
     for (const k of KEYS) for (const c of this.cells[k]) c.label.textContent = t(k);
     this.status.textContent = this.statusText();
     this.renderRecord();
-    this.renderGuide();
+    if (this.tourStep !== null) this.showStep(this.tourStep, true);
     this.cueKey = '';
     this.acc = 1; // redraw the readings and the cue on the next tick
   }
 
-  private renderGuide(): void {
-    const body = $('#guide-body');
-    body.replaceChildren();
-    for (const section of guideSections()) {
-      const h = document.createElement('h2');
-      h.textContent = section.title;
-      body.appendChild(h);
-      for (const para of section.body) {
-        const p = document.createElement('p');
-        if (para.startsWith('* ')) {
-          const [term, ...rest] = para.slice(2).split(': ');
-          const b = document.createElement('b');
-          b.textContent = term;
-          p.className = 'term';
-          p.append(b, ' ', rest.join(': '));
-        } else {
-          p.textContent = para;
-        }
-        body.appendChild(p);
-      }
+  private openGuide(): void {
+    if (this.tourStep !== null) return;
+    this.closeMenu();
+    this.start.hidden = true;
+    this.readings.hidden = false;
+    this.tour.hidden = false;
+    this.showStep(0);
+  }
+
+  private endTour(): void {
+    if (this.tourStep === null) return;
+    this.tourStep = null;
+    this.tour.hidden = true;
+    cfg.sim.on = false;
+    if (!this.live) {
+      this.start.hidden = false;
+      this.readings.hidden = true;
     }
   }
 
-  private openGuide(): void {
-    this.guide.hidden = false;
-    $('#btn-guide-close').focus();
+  // keepSlider: re-rendering for a language switch, so the visitor's slider stays put.
+  private showStep(i: number, keepSlider = false): void {
+    const steps = tourSteps();
+    const step: TourStep = steps[i];
+    this.tourStep = i;
+    $('#tour-step').textContent = t('tourStep', { n: i + 1, total: steps.length });
+    $('#tour-title').textContent = step.title;
+    $('#tour-text').textContent = step.text;
+    $('#btn-tour-back').hidden = i === 0;
+    $('#btn-tour-next').textContent = i + 1 < steps.length ? t('tourNext') : t('tourDone');
+
+    const control = $('#tour-control');
+    control.hidden = !step.control;
+    if (step.control) {
+      $('#tour-low').textContent = step.low ?? '';
+      $('#tour-high').textContent = step.high ?? '';
+      this.tourRange.min = step.control === 'volume' ? '-1' : '0';
+      if (!keepSlider) this.tourRange.value = String(step.pose ?? 0);
+    }
+
+    const terms = $('#tour-terms');
+    terms.replaceChildren();
+    for (const line of step.terms ?? []) {
+      const [term, ...rest] = line.split(': ');
+      const p = document.createElement('p');
+      const b = document.createElement('b');
+      b.textContent = term + ':';
+      p.append(b, ' ', rest.join(': '));
+      terms.appendChild(p);
+    }
+    $('#tour-samples').hidden = !step.samples;
+    this.pose();
   }
 
-  private closeGuide(): void {
-    this.guide.hidden = true;
+  // Hand the organism the pose for the current step: one reading at the slider, the rest at rest.
+  private pose(): void {
+    if (this.tourStep === null) return;
+    const step = tourSteps()[this.tourStep];
+    const v = step.control ? Number(this.tourRange.value) : 0;
+    const sim = cfg.sim;
+    sim.on = true;
+    sim.voice = 1;
+    sim.volume = step.control === 'volume' ? v : 0;
+    sim.pace = step.control === 'pace' ? v : 0;
+    sim.overlap = step.control === 'voices' ? v : 0;
+    sim.noise = step.control === 'noise' ? v : 0;
+  }
+
+  // While the tour drives the organism, the cue and the bars follow the pose too.
+  private posed(m: Metrics): Metrics {
+    const s = cfg.sim;
+    const rate = 2.5 + 4 * s.pace;
+    return {
+      ...m, volume: s.volume, pace: s.pace, voices: s.overlap, noise: s.noise, snrBad: 0, rate, sinceVoice: 0,
+      status: statusWords({ recent: true, warmingUp: false, volume: s.volume, pace: s.pace, rate, byRun: false, voices: s.overlap, noise: s.noise, snrBad: 0 }),
+    };
   }
 
   private toggleMenu(): void {
@@ -239,13 +305,15 @@ export class Overlay {
   }
 
   began(): void {
+    this.live = true;
     this.start.hidden = true;
     this.readings.hidden = false;
   }
 
-  tick(m: Metrics, dt: number): void {
+  tick(real: Metrics, dt: number): void {
     this.acc += dt;
     if (this.acc < 0.12) return;
+    const m = cfg.sim.on ? this.posed(real) : real;
     const cue = this.picker.pick(m, this.acc);
     this.acc = 0;
     this.readings.classList.toggle('idle', m.sinceVoice > 4);

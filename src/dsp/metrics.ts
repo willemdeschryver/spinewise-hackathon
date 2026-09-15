@@ -58,6 +58,35 @@ const WARMUP_SEC = 2;
 const SEG_STALE_SEC = 2;
 const GATED = 1e9;
 
+export interface StatusInputs {
+  recent: boolean; warmingUp: boolean; volume: number; pace: number; rate: number; byRun: boolean; voices: number; noise: number; snrBad: number;
+}
+
+// The sentence-case words in the readings strip. Pure, so the guided tour can pose them.
+export const statusWords = (s: StatusInputs): Metrics['status'] => ({
+  volume: !s.recent ? (s.warmingUp ? 'listening' : 'no speech')
+    : s.volume < -0.6 ? 'too quiet to follow'
+    : s.volume < -0.2 ? 'a bit quiet'
+    : s.volume > 0.65 ? 'too loud'
+    : s.volume > 0.25 ? 'loud'
+    : 'comfortable',
+  pace: !s.recent ? 'listening'
+    : s.pace < 0.25 ? (s.rate < 2.4 ? 'slow' : 'steady')
+    : s.byRun ? (s.pace < 0.65 ? 'few pauses' : 'no pauses')
+    : s.pace < 0.65 ? 'quick'
+    : 'too fast',
+  voices: !s.recent ? 'listening'
+    : s.voices < 0.3 ? 'one at a time'
+    : s.voices < 0.6 ? 'some overlap'
+    : 'talking over each other',
+  noise: s.warmingUp ? 'listening'
+    : s.recent && s.snrBad > 0.6 ? 'masking speech'
+    : s.noise < 0.25 ? 'clear'
+    : s.noise < 0.5 ? 'some noise'
+    : s.noise < 0.75 ? 'noisy'
+    : 'very noisy',
+});
+
 export class MetricsTracker {
   readonly dt: number;
   private t = 0;
@@ -407,29 +436,7 @@ export class MetricsTracker {
     const strainRaw = 1 - (1 - 0.7 * Math.max(quiet01, loud01)) * (1 - 0.8 * pace) * (1 - voices) * (1 - 0.8 * noise) * (1 - 0.6 * snrBad);
     this.strain += alpha(dt, 1.2) * (strainRaw - this.strain);
 
-    const status = {
-      volume: !recent ? (warmingUp ? 'listening' : 'no speech')
-        : volume < -0.6 ? 'too quiet to follow'
-        : volume < -0.2 ? 'a bit quiet'
-        : volume > 0.65 ? 'too loud'
-        : volume > 0.25 ? 'loud'
-        : 'comfortable',
-      pace: !recent ? 'listening'
-        : pace < 0.25 ? (this.rate < 2.4 ? 'slow' : 'steady')
-        : paceRun > paceRate ? (pace < 0.65 ? 'few pauses' : 'no pauses')
-        : pace < 0.65 ? 'quick'
-        : 'too fast',
-      voices: !recent ? 'listening'
-        : voices < 0.3 ? 'one at a time'
-        : voices < 0.6 ? 'some overlap'
-        : 'talking over each other',
-      noise: warmingUp ? 'listening'
-        : recent && snrBad > 0.6 ? 'masking speech'
-        : noise < 0.25 ? 'clear'
-        : noise < 0.5 ? 'some noise'
-        : noise < 0.75 ? 'noisy'
-        : 'very noisy',
-    };
+    const status = statusWords({ recent, warmingUp, volume, pace, rate: this.rate, byRun: paceRun > paceRate, voices, noise, snrBad });
 
     this.last = {
       level: this.level, speechLevel: this.speechLevel, speechRef: this.speechRef, noiseFloor: this.noiseFloor, speechFloor: this.speechFloor, speechPeak: this.speechPeak, snr,

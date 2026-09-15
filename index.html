@@ -55,15 +55,28 @@
       </div>
     </div>
 
-    <div class="guide" id="guide" hidden role="dialog" aria-labelledby="guide-title">
-      <div class="guide-panel">
-        <div class="guide-head">
-          <h1 id="guide-title" data-i18n="help">How it works</h1>
-          <button class="ghost" id="btn-guide-close" data-i18n="close">Close</button>
-        </div>
-        <div class="guide-body" id="guide-body"></div>
+    <aside class="tour" id="tour" hidden aria-labelledby="tour-title">
+      <div class="tour-head">
+        <span class="tour-step" id="tour-step"></span>
+        <button class="ghost" id="btn-tour-close" data-i18n="close">Close</button>
       </div>
-    </div>
+      <h1 id="tour-title"></h1>
+      <p id="tour-text"></p>
+      <div class="tour-control" id="tour-control" hidden>
+        <span class="tour-low" id="tour-low"></span>
+        <input type="range" id="tour-range" min="0" max="1" step="0.01" value="0" />
+        <span class="tour-high" id="tour-high"></span>
+      </div>
+      <div class="tour-terms" id="tour-terms"></div>
+      <div class="tour-samples" id="tour-samples" hidden>
+        <div class="menu-group" data-i18n="tourTry">Try a clip</div>
+        <div id="tour-sample-buttons"></div>
+      </div>
+      <div class="tour-nav">
+        <button class="outline" id="btn-tour-back" data-i18n="tourBack">Back</button>
+        <button class="primary" id="btn-tour-next">Next</button>
+      </div>
+    </aside>
 
     <div id="tune" class="tune" hidden></div>
 

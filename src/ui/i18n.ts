@@ -12,6 +12,11 @@ const dict = {
   tune: ['Tune', 'Afstellen'],
   help: ['How it works', 'Hoe werkt het?'],
   close: ['Close', 'Sluiten'],
+  tourNext: ['Next', 'Volgende'],
+  tourBack: ['Back', 'Terug'],
+  tourDone: ['Done', 'Klaar'],
+  tourStep: ['{n} of {total}', '{n} van {total}'],
+  tourTry: ['Try a clip', 'Probeer een fragment'],
   notListeningYet: ['Not listening yet', 'Luistert nog niet'],
   notListening: ['Not listening', 'Luistert niet'],
   askingMic: ['Asking for the microphone', 'Microfoon aanvragen'],
@@ -88,81 +93,107 @@ const dict = {
 
 export type Key = keyof typeof dict;
 
-// The onboarding guide: one section per topic, each a title and a few paragraphs. A
-// paragraph starting with "* " is rendered as a term with its explanation after the colon.
-export interface GuideSection { title: string; body: string[] }
+// The guided tour. Each step poses the organism by hand (cfg.sim) and lets the visitor
+// drag one reading to see what it does. Terms are "name: explanation" lines.
+export type TourControl = 'volume' | 'pace' | 'voices' | 'noise';
+export interface TourStep {
+  title: string;
+  text: string;
+  control?: TourControl;
+  low?: string;
+  high?: string;
+  pose?: number;       // where the slider starts on this step
+  terms?: string[];
+  samples?: boolean;   // show the sample clips as "try it" buttons
+}
 
-const guide: Record<Lang, GuideSection[]> = {
+const tour: Record<Lang, TourStep[]> = {
   en: [
     {
-      title: 'What you are looking at',
-      body: [
-        'The shape in the middle is the room. It breathes with the conversation. When the room is easy to follow it stays round, mint and calm. When it gets harder, it grows, speeds up, splits, fogs over and turns amber, then red.',
-        'On each edge of the screen there is one short line: the one thing the table could do right now, such as "Slow down a little" or "One at a time". It faces every seat, so the person with hearing loss no longer has to be the one who interrupts.',
-      ],
+      title: 'This shape is the room',
+      text: 'When the conversation is easy to follow it stays round, mint and calm, breathing slowly. Everything Attune hears changes one thing about it, so the whole table can read the room without reading numbers. On the next steps, drag the slider and watch.',
     },
     {
-      title: 'Sources',
-      body: [
-        'Open the Source menu (top right) to choose what Attune listens to.',
-        '* Microphone: listens to this room live. Lay the device in the middle of the table. The browser will ask for permission once. Key: m.',
-        '* Open a recording: plays an audio file from this device (WAV, MP3, ...) as if it were the room. Handy to replay a meeting or to test without people around.',
-        '* Sample clips: short synthetic meetings, one per situation: calm, too quiet, too loud, a fast talker, two people at once, background noise, and a story that runs through all of them. They loop until you pick another source.',
-        '* Play clips out loud: when on, recordings and clips also come out of the speakers. Switch it off if the sound feeds back into the microphone.',
-        '* Record this room for tuning: saves 15 to 20 seconds of raw microphone audio as a WAV file in your downloads. Type a short label first (for example "two-people"). These recordings are used to tune the thresholds for this room and this device.',
-      ],
+      title: 'Volume changes its size',
+      text: 'Speech that is too quiet shrinks the body. Speech that is too loud swells it and makes it pulse. Both are judged against the normal level in this room, learnt from the first seconds of talk, so a soft-spoken team and a loud one both read as comfortable in the middle.',
+      control: 'volume', low: 'too quiet', high: 'too loud', pose: 0.85,
     },
     {
-      title: 'The four readings',
-      body: [
-        'Switch them on with "Show the readings as bars" in the Source menu, or key c. Each bar fills and turns red as that reading gets worse.',
-        '* Volume: how loud the speech is compared with the normal level in this room. Too quiet and too loud are both hard to follow.',
-        '* Pace: syllables per second, and how long someone talks without a pause of a third of a second. Someone with hearing loss needs the gaps to catch up.',
-        '* Voices: how much people talk over each other. Two voices at once are the hardest thing to follow.',
-        '* Clarity: how far the speech rises above the background noise in the speech band. Ventilation, traffic and a laptop fan do not count unless they mask words.',
-      ],
+      title: 'Pace changes its breathing',
+      text: 'The body breathes at the pace of the talk. Fast syllables, and long stretches without a pause, make it breathe faster and more restless. Someone with hearing loss needs the pauses to catch up, so the gaps count as much as the speed.',
+      control: 'pace', low: 'calm', high: 'too fast', pose: 0.85,
     },
     {
-      title: 'Keys',
-      body: [
-        '* m: microphone. c: readings as bars. h: hide everything except the room, for a projector. f: fullscreen. t: the tuning panel. Esc: close the menu.',
+      title: 'Voices split it in two',
+      text: 'As soon as two people talk over each other, the body starts to pull apart into two. Two voices at once are the hardest thing to follow with hearing loss, so this is the most visible change the room can make.',
+      control: 'voices', low: 'one at a time', high: 'everyone at once', pose: 0.85,
+    },
+    {
+      title: 'Noise fogs it over',
+      text: 'Background noise that masks the speech fogs the body and grits its surface. Only noise inside the speech band counts: ventilation, traffic and a laptop fan stay invisible until they cover words. Whatever the cause, the colour moves from mint to amber to red as the room gets harder.',
+      control: 'noise', low: 'clear', high: 'very noisy', pose: 0.85,
+    },
+    {
+      title: 'One line on every edge',
+      text: 'Each edge of the screen shows the one thing the table could do right now, facing that seat. It appears when a reading gets bad, stays a few seconds, and goes away when the room recovers. This is the point: the person with hearing loss no longer has to be the one who interrupts.',
+      control: 'voices', low: 'one at a time', high: 'everyone at once', pose: 0.85,
+    },
+    {
+      title: 'Choose what it listens to',
+      text: 'The Source menu (top right) picks the input. Try a clip below to see the room react to real sound.',
+      terms: [
+        'Microphone: listens to this room live. Lay the device in the middle of the table. Key m.',
+        'Open a recording: plays an audio file from this device as if it were the room.',
+        'Sample clips: short synthetic meetings, one per situation. They loop until you pick another source.',
+        'Play clips out loud: also sends clips to the speakers. Turn off if the sound feeds back into the mic.',
+        'Record this room for tuning: saves raw microphone audio as a WAV file, to tune the thresholds for this room.',
+        'Keys: c bars, h hide everything for a projector, f fullscreen, t tuning panel, ? this tour.',
       ],
+      samples: true,
     },
   ],
   nl: [
     {
-      title: 'Wat je ziet',
-      body: [
-        'De vorm in het midden is de ruimte. Ze ademt mee met het gesprek. Als de ruimte goed te volgen is, blijft ze rond, mintgroen en rustig. Wordt het lastiger, dan groeit ze, versnelt ze, splitst ze, wordt ze mistig en kleurt ze oranje en daarna rood.',
-        'Aan elke rand van het scherm staat één korte zin: het ene wat de tafel nu kan doen, zoals "Iets trager" of "Om de beurt". Ze is naar elke stoel gericht, zodat de persoon met gehoorverlies niet meer de enige is die moet onderbreken.',
-      ],
+      title: 'Deze vorm is de ruimte',
+      text: 'Als het gesprek goed te volgen is, blijft ze rond, mintgroen en rustig, en ademt ze traag. Alles wat Attune hoort verandert één ding aan haar, zodat de hele tafel de ruimte kan lezen zonder cijfers te lezen. Sleep in de volgende stappen de schuif en kijk wat er gebeurt.',
     },
     {
-      title: 'Bronnen',
-      body: [
-        'Open het menu Bron (rechtsboven) om te kiezen waar Attune naar luistert.',
-        '* Microfoon: luistert live naar deze ruimte. Leg het toestel midden op tafel. De browser vraagt één keer om toestemming. Toets: m.',
-        '* Opname openen: speelt een geluidsbestand van dit toestel af (WAV, MP3, ...) alsof het de ruimte is. Handig om een vergadering opnieuw te bekijken of om te testen zonder mensen erbij.',
-        '* Voorbeeldfragmenten: korte synthetische vergaderingen, één per situatie: rustig, te stil, te luid, een snelle spreker, twee mensen tegelijk, achtergrondlawaai, en een verhaal dat ze allemaal doorloopt. Ze herhalen tot je een andere bron kiest.',
-        '* Fragmenten hardop afspelen: als dit aanstaat, komen opnames en fragmenten ook uit de luidsprekers. Zet het uit als het geluid terugkoppelt in de microfoon.',
-        '* Deze ruimte opnemen om af te stellen: bewaart 15 tot 20 seconden ruwe microfoonaudio als WAV-bestand in je downloads. Typ eerst een kort label (bijvoorbeeld "twee-personen"). Met die opnames stellen we de drempels af op deze ruimte en dit toestel.',
-      ],
+      title: 'Volume verandert haar grootte',
+      text: 'Te stille spraak doet het lichaam krimpen. Te luide spraak doet het zwellen en kloppen. Allebei worden ze vergeleken met het normale niveau in deze ruimte, geleerd uit de eerste seconden gesprek, zodat een zachte ploeg en een luide ploeg allebei als aangenaam in het midden lezen.',
+      control: 'volume', low: 'te stil', high: 'te luid', pose: 0.85,
     },
     {
-      title: 'De vier metingen',
-      body: [
-        'Zet ze aan met "Metingen als balken tonen" in het menu Bron, of met toets c. Elke balk vult zich en kleurt rood naarmate die meting slechter wordt.',
-        '* Volume: hoe luid de spraak is vergeleken met het normale niveau in deze ruimte. Te stil en te luid zijn allebei moeilijk te volgen.',
-        '* Tempo: lettergrepen per seconde, en hoe lang iemand praat zonder een pauze van een derde seconde. Iemand met gehoorverlies heeft die gaten nodig om bij te blijven.',
-        '* Stemmen: hoeveel mensen door elkaar praten. Twee stemmen tegelijk zijn het moeilijkst te volgen.',
-        '* Verstaanbaarheid: hoe ver de spraak boven het achtergrondlawaai uitkomt in de spraakband. Ventilatie, verkeer en een laptopventilator tellen niet mee, tenzij ze woorden overstemmen.',
-      ],
+      title: 'Tempo verandert haar ademhaling',
+      text: 'Het lichaam ademt op het tempo van het gesprek. Snelle lettergrepen, en lange stukken zonder pauze, doen het sneller en onrustiger ademen. Iemand met gehoorverlies heeft de pauzes nodig om bij te blijven, dus de gaten tellen even hard als de snelheid.',
+      control: 'pace', low: 'rustig', high: 'te snel', pose: 0.85,
     },
     {
-      title: 'Toetsen',
-      body: [
-        '* m: microfoon. c: metingen als balken. h: alles verbergen behalve de ruimte, voor een projector. f: volledig scherm. t: het afstelpaneel. Esc: menu sluiten.',
+      title: 'Stemmen splitsen haar in twee',
+      text: 'Zodra twee mensen door elkaar praten, begint het lichaam uit elkaar te trekken in twee delen. Twee stemmen tegelijk zijn met gehoorverlies het moeilijkst te volgen, dus dit is de meest zichtbare verandering die de ruimte kan maken.',
+      control: 'voices', low: 'om de beurt', high: 'iedereen tegelijk', pose: 0.85,
+    },
+    {
+      title: 'Lawaai maakt haar mistig',
+      text: 'Achtergrondlawaai dat de spraak overstemt, maakt het lichaam mistig en korrelig. Alleen lawaai in de spraakband telt: ventilatie, verkeer en een laptopventilator blijven onzichtbaar tot ze woorden bedekken. Wat de oorzaak ook is, de kleur schuift van mint naar oranje naar rood naarmate de ruimte lastiger wordt.',
+      control: 'noise', low: 'helder', high: 'veel lawaai', pose: 0.85,
+    },
+    {
+      title: 'Eén zin aan elke rand',
+      text: 'Elke rand van het scherm toont het ene wat de tafel nu kan doen, gericht naar die stoel. De zin verschijnt als een meting slecht wordt, blijft een paar seconden staan en verdwijnt als de ruimte herstelt. Daar draait het om: de persoon met gehoorverlies hoeft niet meer de enige te zijn die onderbreekt.',
+      control: 'voices', low: 'om de beurt', high: 'iedereen tegelijk', pose: 0.85,
+    },
+    {
+      title: 'Kies waar ze naar luistert',
+      text: 'Het menu Bron (rechtsboven) kiest de invoer. Probeer hieronder een fragment om de ruimte op echt geluid te zien reageren.',
+      terms: [
+        'Microfoon: luistert live naar deze ruimte. Leg het toestel midden op tafel. Toets m.',
+        'Opname openen: speelt een geluidsbestand van dit toestel af alsof het de ruimte is.',
+        'Voorbeeldfragmenten: korte synthetische vergaderingen, één per situatie. Ze herhalen tot je een andere bron kiest.',
+        'Fragmenten hardop afspelen: stuurt fragmenten ook naar de luidsprekers. Zet uit als het geluid terugkoppelt in de microfoon.',
+        'Deze ruimte opnemen om af te stellen: bewaart ruwe microfoonaudio als WAV-bestand, om de drempels op deze ruimte af te stellen.',
+        'Toetsen: c balken, h alles verbergen voor een projector, f volledig scherm, t afstelpaneel, ? deze rondleiding.',
       ],
+      samples: true,
     },
   ],
 };
@@ -199,4 +230,4 @@ export const t = (key: Key, vars: Record<string, string | number> = {}): string 
 // Status words from the worker; anything unknown (an error text, say) passes through.
 export const tStatus = (word: string): string => (word in dict ? t(word as Key) : word);
 
-export const guideSections = (): GuideSection[] => guide[current];
+export const tourSteps = (): TourStep[] => tour[current];
