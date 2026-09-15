@@ -14,23 +14,29 @@
       <div class="brand">Attune</div>
       <div class="status" id="status" aria-live="polite">Not listening yet</div>
       <div class="actions">
-        <button class="ghost" id="btn-source" aria-haspopup="menu" aria-expanded="false">Source</button>
-        <button class="ghost" id="btn-tune" aria-pressed="false">Tune</button>
+        <div class="lang" role="group" aria-label="Language">
+          <button data-lang="en" aria-pressed="false">EN</button>
+          <button data-lang="nl" aria-pressed="false">NL</button>
+        </div>
+        <button class="ghost" data-open-guide data-i18n="help">How it works</button>
+        <button class="ghost" id="btn-source" aria-haspopup="menu" aria-expanded="false" data-i18n="source">Source</button>
+        <button class="ghost" id="btn-tune" aria-pressed="false" data-i18n="tune">Tune</button>
       </div>
     </header>
 
     <div class="menu" id="menu" hidden role="menu">
-      <button role="menuitem" data-src="mic">Microphone</button>
-      <button role="menuitem" data-src="file">Open a recording</button>
-      <div class="menu-group">Sample clips</div>
+      <button role="menuitem" data-src="mic" data-i18n="menuMic">Microphone</button>
+      <button role="menuitem" data-src="file" data-i18n="menuFile">Open a recording</button>
+      <div class="menu-group" data-i18n="menuSamples">Sample clips</div>
       <div id="menu-samples"></div>
-      <label class="menu-check"><input type="checkbox" id="chk-monitor" checked /> Play clips out loud</label>
-      <label class="menu-check"><input type="checkbox" id="chk-charts" /> Show the readings as bars</label>
-      <div class="menu-group">Record this room for tuning</div>
+      <label class="menu-check"><input type="checkbox" id="chk-monitor" checked /> <span data-i18n="menuMonitor">Play clips out loud</span></label>
+      <label class="menu-check"><input type="checkbox" id="chk-charts" /> <span data-i18n="menuCharts">Show the readings as bars</span></label>
+      <div class="menu-group" data-i18n="menuRecord">Record this room for tuning</div>
       <div class="menu-record">
-        <input type="text" id="rec-label" placeholder="label, e.g. two-people" autocomplete="off" />
+        <input type="text" id="rec-label" data-i18n-ph="recordPlaceholder" placeholder="label, e.g. two-people" autocomplete="off" />
         <button role="menuitem" id="btn-record">Start recording</button>
       </div>
+      <button role="menuitem" class="menu-help" data-open-guide data-i18n="help">How it works</button>
     </div>
     <input type="file" id="file" accept="audio/*" hidden />
 
@@ -38,13 +44,24 @@
 
     <div class="start" id="start">
       <div class="start-inner">
-        <h1>How easy is this room to follow?</h1>
-        <p>Attune listens to the conversation and shows, at a glance, what makes it hard for someone with hearing loss to keep up: volume, pace, people talking over each other, and background noise.</p>
+        <h1 data-i18n="startTitle">How easy is this room to follow?</h1>
+        <p data-i18n="startText">Attune listens to the conversation and shows, at a glance, what makes it hard for someone with hearing loss to keep up: volume, pace, people talking over each other, and background noise.</p>
         <div class="start-actions">
-          <button class="primary" id="btn-mic">Listen to this room</button>
-          <button class="outline" id="btn-sample">Play a sample meeting</button>
+          <button class="primary" id="btn-mic" data-i18n="startMic">Listen to this room</button>
+          <button class="outline" id="btn-sample" data-i18n="startSample">Play a sample meeting</button>
+          <button class="link" data-open-guide data-i18n="help">How it works</button>
         </div>
-        <p class="hint">Works best with the device lying in the middle of the table.</p>
+        <p class="hint" data-i18n="startHint">Works best with the device lying in the middle of the table.</p>
+      </div>
+    </div>
+
+    <div class="guide" id="guide" hidden role="dialog" aria-labelledby="guide-title">
+      <div class="guide-panel">
+        <div class="guide-head">
+          <h1 id="guide-title" data-i18n="help">How it works</h1>
+          <button class="ghost" id="btn-guide-close" data-i18n="close">Close</button>
+        </div>
+        <div class="guide-body" id="guide-body"></div>
       </div>
     </div>
 

@@ -76,7 +76,25 @@ button:focus-visible, input:focus-visible {
   text-overflow: ellipsis;
 }
 
-.actions { display: flex; gap: 4px; }
+.actions { display: flex; gap: 4px; align-items: center; }
+
+.lang {
+  display: flex;
+  margin-right: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.lang button {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 5px 9px;
+  color: var(--muted);
+  transition: color 0.15s, background 0.15s;
+}
+.lang button:hover { color: var(--ink); }
+.lang button[aria-pressed='true'] { color: var(--bg); background: var(--soft); }
 
 .ghost {
   color: var(--ink);
@@ -135,6 +153,55 @@ button:focus-visible, input:focus-visible {
 }
 .menu-record input::placeholder { color: var(--muted); }
 #btn-record.recording { color: var(--hot); }
+.menu-help {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 6px;
+  padding-top: 10px !important;
+  color: var(--soft);
+}
+
+/* The guide: onboarding text over a dimmed room. */
+.guide {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  background: rgba(5, 8, 16, 0.72);
+  backdrop-filter: blur(10px);
+  overflow: auto;
+  padding: 48px 16px;
+}
+.guide-panel {
+  max-width: 640px;
+  margin: 0 auto;
+  background: rgba(10, 14, 22, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 28px 32px 36px;
+}
+.guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.guide-head h1 {
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+.guide-body h2 {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--calm);
+  margin: 28px 0 10px;
+}
+.guide-body p { margin: 0 0 12px; color: var(--soft); }
+.guide-body p.term { padding-left: 16px; }
+.guide-body p.term b { color: var(--ink); font-weight: 600; }
 
 .readings-all {
   position: fixed;
@@ -265,7 +332,15 @@ body.charts { --edge: 190px; }
   color: var(--muted);
   margin: 18px 0 0;
 }
-.start-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.start-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.link {
+  color: var(--soft);
+  padding: 9px 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+}
+.link:hover { color: var(--ink); }
 .primary {
   background: var(--calm);
   color: #05110f;
@@ -305,7 +380,7 @@ body.charts { --edge: 190px; }
   --tp-container-foreground-color: #d6dee3;
 }
 
-body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu {
+body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu, body.bare .guide {
   opacity: 0;
   pointer-events: none;
 }
@@ -329,6 +404,9 @@ body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu {
   .start-inner { left: 16px; right: 16px; bottom: 24px; padding-right: 0; }
   .start h1 { font-size: 26px; }
   .menu, .tune { right: 12px; left: 12px; width: auto; }
+  .top .status { display: none; }
+  .guide { padding: 16px 12px; }
+  .guide-panel { padding: 20px 20px 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

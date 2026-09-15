@@ -3,24 +3,16 @@ import type { Metrics } from '../dsp/metrics';
 // The one thing the table could do right now, chosen from the worst reading. A cue
 // switches on above `enter`, stays until its reading falls below `leave`, and holds for
 // `holdSec` so the room is not nagged by a flickering instruction.
-export interface Cue { text: string; severity: number; fine: boolean }
+export type CueKind = 'quiet' | 'loud' | 'rate' | 'run' | 'voices' | 'noise';
 
-type Kind = 'quiet' | 'loud' | 'rate' | 'run' | 'voices' | 'noise';
+// kind null: nothing to say. fine: the room is easy to follow (shown dimly) or silent.
+export interface Cue { kind: CueKind | null; severity: number; fine: boolean }
 
-const TEXT: Record<Kind, string> = {
-  quiet: 'Speak up a little',
-  loud: 'A little softer',
-  rate: 'Slow down a little',
-  run: 'Leave a pause now and then',
-  voices: 'One at a time',
-  noise: 'Reduce the background noise',
-};
-
-const FINE: Cue = { text: 'Easy to follow', severity: 0, fine: true };
-const NONE: Cue = { text: '', severity: 0, fine: true };
+const FINE: Cue = { kind: null, severity: 0, fine: true };
+const NONE: Cue = { kind: null, severity: 0, fine: false };
 
 export class CuePicker {
-  private kind: Kind | null = null;
+  private kind: CueKind | null = null;
   private since = 0;
   private t = 0;
 
@@ -30,7 +22,7 @@ export class CuePicker {
     this.t += dt;
     const recent = m.sinceVoice < 4;
     const byRun = m.status.pace === 'few pauses' || m.status.pace === 'no pauses';
-    const sev: Record<Kind, number> = {
+    const sev: Record<CueKind, number> = {
       quiet: recent ? Math.max(0, -m.volume) : 0,
       loud: recent ? Math.max(0, m.volume) : 0,
       rate: recent && !byRun ? m.pace : 0,
@@ -39,8 +31,8 @@ export class CuePicker {
       noise: Math.max(m.noise, m.snrBad),
     };
 
-    let worst: Kind = 'quiet';
-    for (const k of Object.keys(sev) as Kind[]) if (sev[k] > sev[worst]) worst = k;
+    let worst: CueKind = 'quiet';
+    for (const k of Object.keys(sev) as CueKind[]) if (sev[k] > sev[worst]) worst = k;
 
     const held = this.t - this.since < this.holdSec;
     if (this.kind) {
@@ -50,11 +42,11 @@ export class CuePicker {
     }
     if (!this.kind && sev[worst] >= this.enter) this.start(worst);
 
-    if (this.kind) return { text: TEXT[this.kind], severity: sev[this.kind], fine: false };
+    if (this.kind) return { kind: this.kind, severity: sev[this.kind], fine: false };
     return recent ? FINE : NONE;
   }
 
-  private start(kind: Kind): void {
+  private start(kind: CueKind): void {
     this.kind = kind;
     this.since = this.t;
   }

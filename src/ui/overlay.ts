@@ -1,17 +1,14 @@
 import type { Metrics } from '../dsp/metrics';
-import { CuePicker } from './cue';
+import { CuePicker, type CueKind } from './cue';
+import { guideSections, initLang, lang, onLang, setLang, t, tStatus, type Key, type Lang } from './i18n';
 
-export interface Sample { id: string; name: string }
+export interface Sample { id: string }
 
 export const SAMPLES: Sample[] = [
-  { id: 'story', name: 'A meeting: calm, then fast, then crosstalk, then noise' },
-  { id: 'calm', name: 'Calm, one person' },
-  { id: 'quiet', name: 'Too quiet' },
-  { id: 'loud', name: 'Too loud' },
-  { id: 'fast', name: 'Fast talker' },
-  { id: 'crosstalk', name: 'Two people at once' },
-  { id: 'noisy', name: 'Background noise' },
+  { id: 'story' }, { id: 'calm' }, { id: 'quiet' }, { id: 'loud' }, { id: 'fast' }, { id: 'crosstalk' }, { id: 'noisy' },
 ];
+
+export const sampleName = (s: Sample): string => t(`sample:${s.id}` as Key);
 
 export interface OverlayHandlers {
   onMic(): void;
@@ -22,12 +19,12 @@ export interface OverlayHandlers {
   onRecord(label: string): void;
 }
 
-type Key = 'volume' | 'pace' | 'voices' | 'noise';
+type ReadingKey = 'volume' | 'pace' | 'voices' | 'noise';
 type Side = 'bottom' | 'top' | 'left' | 'right';
 
-const KEYS: Key[] = ['volume', 'pace', 'voices', 'noise'];
-const LABELS: Record<Key, string> = { volume: 'Volume', pace: 'Pace', voices: 'Voices', noise: 'Clarity' };
+const KEYS: ReadingKey[] = ['volume', 'pace', 'voices', 'noise'];
 const SIDES: Side[] = ['bottom', 'top', 'left', 'right'];
+const CUE_KEY: Record<CueKind, Key> = { quiet: 'cueQuiet', loud: 'cueLoud', rate: 'cueRate', run: 'cueRun', voices: 'cueVoices', noise: 'cueNoise' };
 
 const $ = <T extends HTMLElement>(sel: string): T => {
   const el = document.querySelector<T>(sel);
@@ -35,36 +32,40 @@ const $ = <T extends HTMLElement>(sel: string): T => {
   return el;
 };
 
-// The typographic chrome around the organism: status line, source menu, and one edge
-// block per side of the screen, turned to face that side so a tablet lying flat on the
-// table reads correctly from every seat. Each block carries the action cue (the one thing
-// the table could do now) and, when the charts overlay is on, the four readings as bars.
+// The typographic chrome around the organism: status line, source menu, guide, and one
+// edge block per side of the screen, turned to face that side so a tablet lying flat on
+// the table reads correctly from every seat. Each block carries the action cue (the one
+// thing the table could do now) and, when the charts overlay is on, the four readings as
+// bars. Everything visible is in English or Dutch, switched live.
 export class Overlay {
   private readonly status = $('#status');
   private readonly start = $('#start');
   private readonly readings = $('#readings');
   private readonly menu = $('#menu');
+  private readonly guide = $('#guide');
   private readonly menuButton = $<HTMLButtonElement>('#btn-source');
   private readonly tuneButton = $<HTMLButtonElement>('#btn-tune');
   private readonly fileInput = $<HTMLInputElement>('#file');
   private readonly recordButton = $<HTMLButtonElement>('#btn-record');
   private readonly recordLabel = $<HTMLInputElement>('#rec-label');
-  private readonly cells: Record<Key, { value: HTMLElement; bar: HTMLElement }[]>;
-  private readonly cues: HTMLElement[] = [];
   private readonly chartsCheck = $<HTMLInputElement>('#chk-charts');
+  private readonly cells: Record<ReadingKey, { label: HTMLElement; value: HTMLElement; bar: HTMLElement }[]>;
+  private readonly cues: HTMLElement[] = [];
+  private readonly sampleButtons: HTMLButtonElement[] = [];
   private readonly picker = new CuePicker();
-  private cueText = '';
+  private statusText: () => string = () => t('notListeningYet');
+  private cueKey: Key | '' = '';
   private acc = 0;
   private tuneOpen = false;
-  private recordShown = -1;
+  private recordSeconds: number | null = null;
 
   constructor(private readonly h: OverlayHandlers) {
+    initLang();
     this.cells = { volume: [], pace: [], voices: [], noise: [] };
     for (const side of SIDES) {
       const edge = document.createElement('section');
       edge.className = 'edge';
       edge.dataset.side = side;
-      edge.setAttribute('aria-label', 'Room readings');
       if (side !== 'bottom') edge.setAttribute('aria-hidden', 'true');
       const cue = document.createElement('div');
       cue.className = 'cue';
@@ -77,9 +78,8 @@ export class Overlay {
         const cell = document.createElement('div');
         cell.className = 'reading';
         cell.dataset.k = k;
-        cell.innerHTML = '<span class="label"></span><span class="value">listening</span><span class="bar"></span>';
-        cell.querySelector('.label')!.textContent = LABELS[k];
-        this.cells[k].push({ value: cell.querySelector('.value')!, bar: cell.querySelector('.bar')! });
+        cell.innerHTML = '<span class="label"></span><span class="value"></span><span class="bar"></span>';
+        this.cells[k].push({ label: cell.querySelector('.label')!, value: cell.querySelector('.value')!, bar: cell.querySelector('.bar')! });
         strip.appendChild(cell);
       }
       this.readings.appendChild(edge);
@@ -104,13 +104,22 @@ export class Overlay {
     for (const s of SAMPLES) {
       const b = document.createElement('button');
       b.setAttribute('role', 'menuitem');
-      b.textContent = s.name;
       b.addEventListener('click', () => { this.closeMenu(); h.onSample(s); });
       samples.appendChild(b);
+      this.sampleButtons.push(b);
     }
     this.menu.querySelector('[data-src="mic"]')!.addEventListener('click', () => { this.closeMenu(); h.onMic(); });
     this.menu.querySelector('[data-src="file"]')!.addEventListener('click', () => { this.closeMenu(); this.fileInput.click(); });
     this.recordButton.addEventListener('click', () => h.onRecord(this.recordLabel.value.trim() || 'room'));
+
+    for (const b of document.querySelectorAll<HTMLButtonElement>('.lang button')) {
+      b.addEventListener('click', () => setLang(b.dataset.lang as Lang));
+    }
+    for (const b of document.querySelectorAll<HTMLButtonElement>('[data-open-guide]')) {
+      b.addEventListener('click', () => { this.closeMenu(); this.openGuide(); });
+    }
+    $('#btn-guide-close').addEventListener('click', () => this.closeGuide());
+    this.guide.addEventListener('click', (e) => { if (e.target === this.guide) this.closeGuide(); });
 
     document.addEventListener('click', (e) => {
       if (!this.menu.hidden && !this.menu.contains(e.target as Node) && e.target !== this.menuButton) this.closeMenu();
@@ -118,14 +127,64 @@ export class Overlay {
     document.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       switch (e.key) {
-        case 'Escape': this.closeMenu(); break;
+        case 'Escape': this.closeMenu(); this.closeGuide(); break;
         case 't': this.toggleTune(); break;
         case 'h': document.body.classList.toggle('bare'); break;
         case 'c': this.setCharts(!this.chartsCheck.checked); break;
         case 'f': this.toggleFullscreen(); break;
         case 'm': h.onMic(); break;
+        case '?': this.openGuide(); break;
       }
     });
+
+    onLang(() => this.renderLang());
+    this.renderLang();
+  }
+
+  // Everything static, plus whatever dynamic text is cached, in the current language.
+  private renderLang(): void {
+    for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) el.textContent = t(el.dataset.i18n as Key);
+    for (const el of document.querySelectorAll<HTMLInputElement>('[data-i18n-ph]')) el.placeholder = t(el.dataset.i18nPh as Key);
+    for (const b of document.querySelectorAll<HTMLButtonElement>('.lang button')) b.setAttribute('aria-pressed', String(b.dataset.lang === lang()));
+    SAMPLES.forEach((s, i) => { this.sampleButtons[i].textContent = sampleName(s); });
+    for (const k of KEYS) for (const c of this.cells[k]) c.label.textContent = t(k);
+    this.status.textContent = this.statusText();
+    this.renderRecord();
+    this.renderGuide();
+    this.cueKey = '';
+    this.acc = 1; // redraw the readings and the cue on the next tick
+  }
+
+  private renderGuide(): void {
+    const body = $('#guide-body');
+    body.replaceChildren();
+    for (const section of guideSections()) {
+      const h = document.createElement('h2');
+      h.textContent = section.title;
+      body.appendChild(h);
+      for (const para of section.body) {
+        const p = document.createElement('p');
+        if (para.startsWith('* ')) {
+          const [term, ...rest] = para.slice(2).split(': ');
+          const b = document.createElement('b');
+          b.textContent = term;
+          p.className = 'term';
+          p.append(b, ' ', rest.join(': '));
+        } else {
+          p.textContent = para;
+        }
+        body.appendChild(p);
+      }
+    }
+  }
+
+  private openGuide(): void {
+    this.guide.hidden = false;
+    $('#btn-guide-close').focus();
+  }
+
+  private closeGuide(): void {
+    this.guide.hidden = true;
   }
 
   private toggleMenu(): void {
@@ -159,17 +218,24 @@ export class Overlay {
     else void document.documentElement.requestFullscreen();
   }
 
-  setStatus(text: string): void {
-    this.status.textContent = text;
+  // A thunk, so the line re-renders in the other language when the user switches.
+  setStatus(text: string | (() => string)): void {
+    this.statusText = typeof text === 'string' ? () => text : text;
+    this.status.textContent = this.statusText();
   }
 
   // null when not recording, otherwise elapsed seconds.
   setRecording(seconds: number | null): void {
-    const shown = seconds === null ? -1 : Math.floor(seconds);
-    if (shown === this.recordShown) return;
-    this.recordShown = shown;
-    this.recordButton.classList.toggle('recording', seconds !== null);
-    this.recordButton.textContent = seconds === null ? 'Start recording' : `Stop and save (${shown} s)`;
+    const shown = seconds === null ? null : Math.floor(seconds);
+    if (shown === this.recordSeconds) return;
+    this.recordSeconds = shown;
+    this.renderRecord();
+  }
+
+  private renderRecord(): void {
+    const s = this.recordSeconds;
+    this.recordButton.classList.toggle('recording', s !== null);
+    this.recordButton.textContent = s === null ? t('recordStart') : t('recordStop', { s });
   }
 
   began(): void {
@@ -183,20 +249,22 @@ export class Overlay {
     const cue = this.picker.pick(m, this.acc);
     this.acc = 0;
     this.readings.classList.toggle('idle', m.sinceVoice > 4);
+    const key: Key | '' = cue.kind ? CUE_KEY[cue.kind] : cue.fine ? 'cueFine' : '';
     const tint = cue.severity.toFixed(3);
     for (const el of this.cues) {
-      if (cue.text !== this.cueText) el.textContent = cue.text;
+      if (key !== this.cueKey) el.textContent = key ? t(key) : '';
       el.classList.toggle('fine', cue.fine);
       el.style.setProperty('--sev', tint);
     }
-    this.cueText = cue.text;
-    this.set('volume', m.status.volume, Math.abs(m.volume));
-    this.set('pace', m.sinceVoice < 4 ? m.status.pace + ' ' + m.rate.toFixed(1) + '/s' : m.status.pace, m.pace);
-    this.set('voices', m.status.voices, m.voices);
-    this.set('noise', m.status.noise, Math.max(m.noise, m.snrBad));
+    this.cueKey = key;
+    const recent = m.sinceVoice < 4;
+    this.set('volume', tStatus(m.status.volume), Math.abs(m.volume));
+    this.set('pace', recent ? `${tStatus(m.status.pace)} ${m.rate.toFixed(1)}/s` : tStatus(m.status.pace), m.pace);
+    this.set('voices', tStatus(m.status.voices), m.voices);
+    this.set('noise', tStatus(m.status.noise), Math.max(m.noise, m.snrBad));
   }
 
-  private set(k: Key, text: string, severity: number): void {
+  private set(k: ReadingKey, text: string, severity: number): void {
     const sev = severity.toFixed(3);
     for (const c of this.cells[k]) {
       if (c.value.textContent !== text) c.value.textContent = text;

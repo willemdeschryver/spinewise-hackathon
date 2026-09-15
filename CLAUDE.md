@@ -17,7 +17,7 @@ No backend. Static site, works on a laptop, a tablet on the table, or a projecto
   built-in speech engine, then `scripts/make-samples.mjs` mixes the clips)
 
 Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscreen,
-`m` microphone, `c` readings bars, `Esc` closes the menu.
+`m` microphone, `c` readings bars, `?` the guide, `Esc` closes the menu and the guide.
 
 ## Where things are
 
@@ -77,6 +77,12 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   reading above 0.5 becomes "Slow down a little", "One at a time", ..., with
   hysteresis and a 3 s hold) and, when "Show the readings as bars" is on (key `c`,
   remembered in localStorage), the four readings as bar charts.
+- `src/ui/i18n.ts`: every visible word in English and Dutch, plus the onboarding
+  guide (what the organism shows, what each source does, the four readings, keys).
+  Language comes from localStorage, else the browser, switched live with the EN/NL
+  buttons in the header. Status words leave the worker in English and are looked
+  up in the overlay, so the worker and the harness never see a language. The Tune
+  panel stays English.
 - `src/ui/tune.ts`: Tweakpane panel. Live graphs (including `vad`, `speakers`,
   `segMs` inference time), calibration buttons, every threshold from
   `src/config.ts`, and "Drive by hand" to pose the organism without audio. Any

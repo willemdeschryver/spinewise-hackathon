@@ -7,7 +7,7 @@ const CHUNK = 1024;
 export class AudioEngine {
   ctx: AudioContext | null = null;
   kind: SourceKind = 'none';
-  label = '';
+  deviceName = '';
   onChunk: (chunk: Float32Array, sampleRate: number) => void = () => {};
   onSourceChange: () => void = () => {};
 
@@ -67,26 +67,25 @@ export class AudioEngine {
       },
     };
     this.kind = 'mic';
-    const name = stream.getAudioTracks()[0]?.label;
-    this.label = name ? `Listening through ${name}` : 'Listening to this room';
+    this.deviceName = stream.getAudioTracks()[0]?.label ?? '';
     this.onSourceChange();
   }
 
   async useFile(file: File): Promise<void> {
     const ctx = await this.ensure();
     const buffer = await ctx.decodeAudioData(await file.arrayBuffer());
-    this.play(buffer, `Playing ${file.name}`);
+    this.play(buffer);
   }
 
-  async useUrl(url: string, label: string): Promise<void> {
+  async useUrl(url: string): Promise<void> {
     const ctx = await this.ensure();
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Could not load ${url}`);
     const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
-    this.play(buffer, label);
+    this.play(buffer);
   }
 
-  private play(buffer: AudioBuffer, label: string): void {
+  private play(buffer: AudioBuffer): void {
     const ctx = this.ctx!;
     this.stopCurrent();
     const src = ctx.createBufferSource();
@@ -102,7 +101,6 @@ export class AudioEngine {
       },
     };
     this.kind = 'file';
-    this.label = label;
     this.onSourceChange();
   }
 
@@ -115,7 +113,6 @@ export class AudioEngine {
 
   stop(): void {
     this.stopCurrent();
-    this.label = '';
     this.onSourceChange();
   }
 }

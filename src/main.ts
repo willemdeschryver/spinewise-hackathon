@@ -10,7 +10,8 @@ import type { AnalysisIn, AnalysisOut } from './dsp/analysis.worker';
 import type { SegmentIn, SegmentOut } from './dsp/segment.worker';
 import { VisualMapper } from './visual/mapping';
 import { Renderer } from './visual/renderer';
-import { Overlay, type Sample } from './ui/overlay';
+import { Overlay, sampleName, type Sample } from './ui/overlay';
+import { t } from './ui/i18n';
 import { createTunePane, type Live } from './ui/tune';
 import { cfg } from './config';
 
@@ -72,8 +73,10 @@ const toggleRecord = async (label: string): Promise<void> => {
     overlay.setRecording(null);
     const stamp = new Date().toISOString().slice(11, 19).replace(/:/g, '');
     const safe = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room';
-    downloadBlob(encodeWav(chunks, recRate), `attune-${safe}-${stamp}.wav`);
-    overlay.setStatus(`Saved attune-${safe}-${stamp}.wav (${(chunks.length * 1024 / recRate).toFixed(0)} s)`);
+    const file = `attune-${safe}-${stamp}.wav`;
+    downloadBlob(encodeWav(chunks, recRate), file);
+    const s = (chunks.length * 1024 / recRate).toFixed(0);
+    overlay.setStatus(() => t('saved', { file, s }));
     return;
   }
   if (engine.kind !== 'mic') await engine.useMic();
@@ -87,37 +90,49 @@ engine.onSourceChange = () => {
   sendS({ type: 'reset' });
   if (engine.kind === 'none') {
     metrics = MetricsTracker.idle();
-    overlay.setStatus('Not listening');
+    overlay.setStatus(() => t('notListening'));
   } else {
-    overlay.setStatus(engine.label);
+    overlay.setStatus(sourceStatus);
     overlay.began();
   }
 };
 
-const busy = async (label: string, run: () => Promise<void>): Promise<void> => {
+// What the status line says while a source is live, in the current language.
+let sourceStatus: () => string = () => '';
+
+const busy = async (label: () => string, run: () => Promise<void>): Promise<void> => {
   overlay.setStatus(label);
   try {
     await run();
   } catch (err) {
     const e = err as DOMException;
     if (e.name === 'NotAllowedError') {
-      overlay.setStatus('Microphone access was blocked. Allow it in the address bar and try again.');
+      overlay.setStatus(() => t('micBlocked'));
     } else if (e.name === 'NotFoundError') {
-      overlay.setStatus('No microphone found on this device.');
+      overlay.setStatus(() => t('micMissing'));
     } else {
-      overlay.setStatus(`Could not start: ${e.message ?? e}`);
+      overlay.setStatus(() => t('couldNotStart', { error: e.message ?? String(e) }));
     }
   }
 };
 
 const overlay = new Overlay({
-  onMic: () => void busy('Asking for the microphone', () => engine.useMic()),
-  onFile: (file) => void busy(`Loading ${file.name}`, () => engine.useFile(file)),
-  onSample: (s: Sample) => void busy('Loading the clip', () =>
-    engine.useUrl(`${import.meta.env.BASE_URL}samples/${s.id}.wav`, `Playing: ${s.name}`)),
+  onMic: () => void busy(() => t('askingMic'), async () => {
+    await engine.useMic();
+    sourceStatus = () => engine.deviceName ? t('listeningThrough', { name: engine.deviceName }) : t('listeningRoom');
+    overlay.setStatus(sourceStatus);
+  }),
+  onFile: (file) => void busy(() => t('loadingFile', { name: file.name }), async () => {
+    sourceStatus = () => t('playing', { name: file.name });
+    await engine.useFile(file);
+  }),
+  onSample: (s: Sample) => void busy(() => t('loadingClip'), async () => {
+    sourceStatus = () => t('playing', { name: sampleName(s) });
+    await engine.useUrl(`${import.meta.env.BASE_URL}samples/${s.id}.wav`);
+  }),
   onMonitor: (on) => engine.setMonitor(on),
   onToggleTune: () => { tuneHost.hidden = !tuneHost.hidden; },
-  onRecord: (label) => void busy('Starting the recording', () => toggleRecord(label)),
+  onRecord: (label) => void busy(() => t('startingRecording'), () => toggleRecord(label)),
 });
 
 const tuneHost = document.getElementById('tune') as HTMLElement;
