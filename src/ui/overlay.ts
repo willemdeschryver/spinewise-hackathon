@@ -1,4 +1,5 @@
 import type { Metrics } from '../dsp/metrics';
+import { CuePicker } from './cue';
 
 export interface Sample { id: string; name: string }
 
@@ -25,7 +26,7 @@ type Key = 'volume' | 'pace' | 'voices' | 'noise';
 type Side = 'bottom' | 'top' | 'left' | 'right';
 
 const KEYS: Key[] = ['volume', 'pace', 'voices', 'noise'];
-const LABELS: Record<Key, string> = { volume: 'Volume', pace: 'Pace', voices: 'Voices', noise: 'Background' };
+const LABELS: Record<Key, string> = { volume: 'Volume', pace: 'Pace', voices: 'Voices', noise: 'Clarity' };
 const SIDES: Side[] = ['bottom', 'top', 'left', 'right'];
 
 const $ = <T extends HTMLElement>(sel: string): T => {
@@ -34,9 +35,10 @@ const $ = <T extends HTMLElement>(sel: string): T => {
   return el;
 };
 
-// The typographic chrome around the organism: status line, source menu, the four readings.
-// The readings are drawn four times, once per screen edge and turned to face it, so a
-// tablet lying flat on the table reads correctly from every seat.
+// The typographic chrome around the organism: status line, source menu, and one edge
+// block per side of the screen, turned to face that side so a tablet lying flat on the
+// table reads correctly from every seat. Each block carries the action cue (the one thing
+// the table could do now) and, when the charts overlay is on, the four readings as bars.
 export class Overlay {
   private readonly status = $('#status');
   private readonly start = $('#start');
@@ -48,6 +50,10 @@ export class Overlay {
   private readonly recordButton = $<HTMLButtonElement>('#btn-record');
   private readonly recordLabel = $<HTMLInputElement>('#rec-label');
   private readonly cells: Record<Key, { value: HTMLElement; bar: HTMLElement }[]>;
+  private readonly cues: HTMLElement[] = [];
+  private readonly chartsCheck = $<HTMLInputElement>('#chk-charts');
+  private readonly picker = new CuePicker();
+  private cueText = '';
   private acc = 0;
   private tuneOpen = false;
   private recordShown = -1;
@@ -55,11 +61,18 @@ export class Overlay {
   constructor(private readonly h: OverlayHandlers) {
     this.cells = { volume: [], pace: [], voices: [], noise: [] };
     for (const side of SIDES) {
-      const strip = document.createElement('section');
+      const edge = document.createElement('section');
+      edge.className = 'edge';
+      edge.dataset.side = side;
+      edge.setAttribute('aria-label', 'Room readings');
+      if (side !== 'bottom') edge.setAttribute('aria-hidden', 'true');
+      const cue = document.createElement('div');
+      cue.className = 'cue';
+      cue.setAttribute('aria-live', side === 'bottom' ? 'polite' : 'off');
+      this.cues.push(cue);
+      const strip = document.createElement('div');
       strip.className = 'readings';
-      strip.dataset.side = side;
-      strip.setAttribute('aria-label', 'Room readings');
-      if (side !== 'bottom') strip.setAttribute('aria-hidden', 'true');
+      edge.append(cue, strip);
       for (const k of KEYS) {
         const cell = document.createElement('div');
         cell.className = 'reading';
@@ -69,8 +82,12 @@ export class Overlay {
         this.cells[k].push({ value: cell.querySelector('.value')!, bar: cell.querySelector('.bar')! });
         strip.appendChild(cell);
       }
-      this.readings.appendChild(strip);
+      this.readings.appendChild(edge);
     }
+    let charts = false;
+    try { charts = localStorage.getItem('attune.charts') === '1'; } catch { /* storage blocked */ }
+    this.setCharts(charts);
+    this.chartsCheck.addEventListener('change', () => this.setCharts(this.chartsCheck.checked));
 
     $('#btn-mic').addEventListener('click', () => h.onMic());
     $('#btn-sample').addEventListener('click', () => h.onSample(SAMPLES[0]));
@@ -104,6 +121,7 @@ export class Overlay {
         case 'Escape': this.closeMenu(); break;
         case 't': this.toggleTune(); break;
         case 'h': document.body.classList.toggle('bare'); break;
+        case 'c': this.setCharts(!this.chartsCheck.checked); break;
         case 'f': this.toggleFullscreen(); break;
         case 'm': h.onMic(); break;
       }
@@ -128,6 +146,12 @@ export class Overlay {
     this.tuneOpen = !this.tuneOpen;
     this.tuneButton.setAttribute('aria-pressed', String(this.tuneOpen));
     this.h.onToggleTune();
+  }
+
+  private setCharts(on: boolean): void {
+    this.chartsCheck.checked = on;
+    document.body.classList.toggle('charts', on);
+    try { localStorage.setItem('attune.charts', on ? '1' : '0'); } catch { /* storage blocked */ }
   }
 
   private toggleFullscreen(): void {
@@ -156,8 +180,16 @@ export class Overlay {
   tick(m: Metrics, dt: number): void {
     this.acc += dt;
     if (this.acc < 0.12) return;
+    const cue = this.picker.pick(m, this.acc);
     this.acc = 0;
     this.readings.classList.toggle('idle', m.sinceVoice > 4);
+    const tint = cue.severity.toFixed(3);
+    for (const el of this.cues) {
+      if (cue.text !== this.cueText) el.textContent = cue.text;
+      el.classList.toggle('fine', cue.fine);
+      el.style.setProperty('--sev', tint);
+    }
+    this.cueText = cue.text;
     this.set('volume', m.status.volume, Math.abs(m.volume));
     this.set('pace', m.sinceVoice < 4 ? m.status.pace + ' ' + m.rate.toFixed(1) + '/s' : m.status.pace, m.pace);
     this.set('voices', m.status.voices, m.voices);

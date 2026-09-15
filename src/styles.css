@@ -142,22 +142,45 @@ button:focus-visible, input:focus-visible {
   pointer-events: none;
   transition: opacity 0.4s;
 }
-/* One strip per screen edge. Each is laid out as a bottom strip of width
-   --len, then turned to face its own edge (text "up" points to the centre). */
-.readings {
+/* One block per screen edge: the action cue nearest the centre, the readings bars
+   behind it. Each is laid out as a bottom strip of width --len, then turned to face
+   its own edge (text "up" points to the centre). */
+.edge {
   position: fixed;
   left: 0;
   top: 0;
   width: var(--len);
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+  gap: 14px;
   padding: 12px 24px 20px;
   transform-origin: 0 0;
 }
-.readings[data-side='bottom'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(100vh) translateY(-100%); }
-.readings[data-side='top'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(48px) rotate(180deg) translate(-100%, -100%); }
-.readings[data-side='left'] { --len: 100vh; transform: rotate(90deg) translateY(-100%); }
-.readings[data-side='right'] { --len: 100vh; transform: translate(100vw, 100vh) rotate(-90deg) translateY(-100%); }
+.edge[data-side='bottom'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(100vh) translateY(-100%); }
+.edge[data-side='top'] { --len: 100vw; padding-inline: var(--edge); transform: translateY(48px) rotate(180deg) translate(-100%, -100%); }
+.edge[data-side='left'] { --len: 100vh; transform: rotate(90deg) translateY(-100%); }
+.edge[data-side='right'] { --len: 100vh; transform: translate(100vw, 100vh) rotate(-90deg) translateY(-100%); }
+
+/* The cue: one short instruction for the table, tinted by how bad the reading is. */
+.cue {
+  min-height: 1.2em;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: color-mix(in oklab, var(--warm), var(--hot) calc(var(--sev, 0) * 100%));
+  transition: color 0.4s, opacity 0.6s;
+}
+.cue.fine { color: var(--muted); font-weight: 400; opacity: 0.6; }
+.cue:empty { opacity: 0; }
+
+.readings {
+  display: none;
+  gap: 20px;
+}
+body.charts .readings { display: flex; }
+body.charts { --edge: 190px; }
 
 .reading {
   display: grid;
@@ -289,17 +312,19 @@ body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu {
 
 /* Four readings on a short axis: smaller value type so the long statuses still fit. */
 @media (max-height: 900px) {
-  .readings[data-side='left'] .value, .readings[data-side='right'] .value { font-size: 14px; }
+  .edge[data-side='left'] .value, .edge[data-side='right'] .value { font-size: 14px; }
 }
 @media (max-width: 1100px) {
-  .readings[data-side='top'] .value, .readings[data-side='bottom'] .value { font-size: 14px; }
+  .edge[data-side='top'] .value, .edge[data-side='bottom'] .value { font-size: 14px; }
 }
 
 @media (max-width: 640px) {
   :root { --edge: 16px; }
   .top { padding: 14px var(--edge); }
-  .readings { gap: 14px; padding: 8px var(--edge) 14px; }
-  .readings[data-side='left'], .readings[data-side='right'] { display: none; }
+  .edge { gap: 10px; padding: 8px var(--edge) 14px; }
+  .readings { gap: 14px; }
+  .edge[data-side='left'], .edge[data-side='right'] { display: none; }
+  .cue { font-size: 22px; }
   .reading .value { font-size: 15px; }
   .start-inner { left: 16px; right: 16px; bottom: 24px; padding-right: 0; }
   .start h1 { font-size: 26px; }

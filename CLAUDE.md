@@ -17,7 +17,7 @@ No backend. Static site, works on a laptop, a tablet on the table, or a projecto
   built-in speech engine, then `scripts/make-samples.mjs` mixes the clips)
 
 Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscreen,
-`m` microphone, `Esc` closes the menu.
+`m` microphone, `c` readings bars, `Esc` closes the menu.
 
 ## Where things are
 
@@ -71,9 +71,12 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   from mint to amber to red.
 - `src/visual/organism.frag`: the whole picture is one fullscreen fragment
   shader (simplex fbm, smooth-min of two lobes, fog, grain, vignette).
-- `src/ui/overlay.ts`: status line, source menu, readings, start screen. The four
-  readings are bar charts drawn once per screen edge, each turned to face that edge,
-  so a tablet flat on the table reads from every seat.
+- `src/ui/overlay.ts`: status line, source menu, edge blocks, start screen. One
+  block per screen edge, each turned to face that edge so a tablet flat on the table
+  reads from every seat. A block shows the action cue (`src/ui/cue.ts`: the worst
+  reading above 0.5 becomes "Slow down a little", "One at a time", ..., with
+  hysteresis and a 3 s hold) and, when "Show the readings as bars" is on (key `c`,
+  remembered in localStorage), the four readings as bar charts.
 - `src/ui/tune.ts`: Tweakpane panel. Live graphs (including `vad`, `speakers`,
   `segMs` inference time), calibration buttons, every threshold from
   `src/config.ts`, and "Drive by hand" to pose the organism without audio. Any

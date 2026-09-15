@@ -425,10 +425,10 @@ export class MetricsTracker {
         : 'talking over each other',
       noise: warmingUp ? 'listening'
         : recent && snrBad > 0.6 ? 'masking speech'
-        : noise < 0.25 ? 'low'
-        : noise < 0.5 ? 'some'
-        : noise < 0.75 ? 'high'
-        : 'very high',
+        : noise < 0.25 ? 'clear'
+        : noise < 0.5 ? 'some noise'
+        : noise < 0.75 ? 'noisy'
+        : 'very noisy',
     };
 
     this.last = {
