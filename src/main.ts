@@ -149,12 +149,21 @@ const pane = createTunePane(tuneHost, live, {
   },
 });
 
+// On a phone held upright the start card and the tour cover the lower half of the screen,
+// so the body moves up while one of them is showing.
+const startEl = document.getElementById('start') as HTMLElement;
+const tourEl = document.getElementById('tour') as HTMLElement;
+const wantedShift = (): number =>
+  window.innerHeight > window.innerWidth * 1.3 && (!startEl.hidden || !tourEl.hidden) ? 0.45 : 0;
+let shift = wantedShift();
+
 let last = performance.now();
 const frame = (now: number): void => {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
+  shift += (1 - Math.exp(-dt / 0.5)) * (wantedShift() - shift);
   const p = mapper.update(metrics, dt);
-  renderer.render(now / 1000, p);
+  renderer.render(now / 1000, p, shift);
   overlay.tick(metrics, dt);
   if (recChunks) overlay.setRecording((now - recStart) / 1000);
   live.level = metrics.level;

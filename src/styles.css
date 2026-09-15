@@ -260,9 +260,12 @@ button:focus-visible, input:focus-visible {
   line-height: 1.2;
   letter-spacing: -0.01em;
   color: color-mix(in oklab, var(--warm), var(--hot) calc(var(--sev, 0) * 100%));
-  transition: color 0.4s, opacity 0.6s;
+  transition: color 1.2s ease, opacity 1.6s ease;
 }
 .cue.fine { color: var(--muted); font-weight: 400; opacity: 0.6; }
+/* Fading out before the text changes: quicker than the fade in, so the new line
+   arrives without a long gap. Keep in step with CUE_FADE_MS in overlay.ts. */
+.cue.out { opacity: 0; transition-duration: 1.2s, 0.9s; }
 .cue:empty { opacity: 0; }
 
 .readings {
@@ -416,20 +419,63 @@ body.bare .top, body.bare .readings-all, body.bare .tune, body.bare .menu, body.
   .edge[data-side='top'] .value, .edge[data-side='bottom'] .value { font-size: 14px; }
 }
 
+/* Phones held in the hand: one upright block under the header instead of four turned
+   edges, the cards at the bottom, and the desktop inset for the bars switched off. */
 @media (max-width: 640px) {
-  :root { --edge: 16px; }
-  .top { padding: 14px var(--edge); }
-  .edge { gap: 10px; padding: 8px var(--edge) 14px; }
-  .readings { gap: 14px; }
-  .edge[data-side='left'], .edge[data-side='right'] { display: none; }
+  :root, body.charts { --edge: 16px; }
+  .top {
+    gap: 8px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) var(--edge) 10px;
+  }
+  .top .status, .top [data-open-guide] { display: none; }
+  .top .actions { margin-left: auto; }
+  .lang { flex-shrink: 0; margin-right: 4px; }
+  .lang button { padding: 8px 10px; }
+  .ghost { padding: 8px 10px; }
+  .edge[data-side='left'], .edge[data-side='right'], .edge[data-side='top'] { display: none; }
+  .edge[data-side='bottom'] {
+    transform: translateY(calc(58px + env(safe-area-inset-top, 0px)));
+    gap: 12px;
+    padding: 4px var(--edge) 12px;
+  }
   .cue { font-size: 22px; }
-  .reading .value { font-size: 15px; }
-  .start-inner { left: 16px; right: 16px; bottom: 24px; padding-right: 0; }
+  body.charts .readings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; }
+  .reading .label { font-size: 11px; }
+  .reading .value { font-size: 14px; }
+  .start-inner {
+    left: 16px; right: 16px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    padding-right: 0;
+  }
   .start h1 { font-size: 26px; }
-  .menu, .tune { right: 12px; left: 12px; width: auto; }
-  .top .status { display: none; }
-  .tour { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 12px 18px 18px; max-height: 60vh; }
+  .start p { margin-bottom: 16px; }
+  .start-actions { gap: 8px; }
+  .primary, .outline { padding-block: 11px; }
+  .menu, .tune { top: calc(54px + env(safe-area-inset-top, 0px)); right: 12px; left: 12px; width: auto; }
+  .menu { max-height: calc(100vh - 80px); overflow: auto; }
+  .menu button, .menu-check { padding: 11px 10px; font-size: 15px; }
+  .tour {
+    left: 12px; right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    padding: 12px 18px 18px;
+    max-height: calc(62vh - env(safe-area-inset-bottom, 0px));
+  }
   .tour h1 { font-size: 20px; }
+  .tour p { font-size: 14px; }
+  .tour-control { margin-bottom: 14px; }
+  .tour-nav button { flex: 1 1 0; text-align: center; }
+}
+
+/* Phones held sideways: too short for the turned strips, so only the bottom block stays. */
+@media (max-height: 500px) {
+  :root, body.charts { --edge: 16px; }
+  .top .status { display: none; }
+  .top .actions { margin-left: auto; }
+  .edge[data-side='left'], .edge[data-side='right'], .edge[data-side='top'] { display: none; }
+  .edge[data-side='bottom'] { gap: 8px; padding: 4px var(--edge) 10px; }
+  .cue { font-size: 22px; }
+  .tour { max-height: calc(100vh - 24px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

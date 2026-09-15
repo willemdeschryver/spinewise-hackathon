@@ -14,6 +14,7 @@ uniform float u_grain;    // 0..1 surface grit
 uniform float u_strain;   // 0..1 overall colour shift
 uniform float u_voice;    // 0..1 someone is speaking
 uniform float u_pulse;    // 0..1 decaying burst after a loud onset
+uniform vec2  u_shift;    // where the body sits, in short-axis units from the centre
 uniform vec3  u_calm;
 uniform vec3  u_warm;
 uniform vec3  u_hot;
@@ -71,7 +72,7 @@ void main() {
 
   // The body never sits dead still.
   vec2 drift = 0.025 * vec2(snoise(vec2(t * 0.05, 3.1)), snoise(vec2(t * 0.045, 9.7)));
-  vec2 p = uv - drift;
+  vec2 p = uv - drift - u_shift;
 
   float r = max(u_size * (1.0 + 0.06 * u_breath), 0.03);
   float ang = 0.5 + 0.35 * sin(t * 0.09);

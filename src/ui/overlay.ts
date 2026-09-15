@@ -25,6 +25,9 @@ type Side = 'bottom' | 'top' | 'left' | 'right';
 
 const KEYS: ReadingKey[] = ['volume', 'pace', 'voices', 'noise'];
 const SIDES: Side[] = ['bottom', 'top', 'left', 'right'];
+// How long the cue takes to fade out before its text changes; matches .cue.out in the CSS.
+const CUE_FADE_MS = 900;
+
 const CUE_KEY: Record<CueKind, Key> = { quiet: 'cueQuiet', loud: 'cueLoud', rate: 'cueRate', run: 'cueRun', voices: 'cueVoices', noise: 'cueNoise' };
 
 const $ = <T extends HTMLElement>(sel: string): T => {
@@ -60,7 +63,8 @@ export class Overlay {
   private readonly sampleButtons: HTMLButtonElement[] = [];
   private readonly picker = new CuePicker();
   private statusText: () => string = () => t('notListeningYet');
-  private cueKey: Key | '' = '';
+  private cueKey: Key | '' = '';      // the text in the DOM right now
+  private cueFadeSince = 0;           // when the cue started fading out, 0 while it is not
   private acc = 0;
   private tuneOpen = false;
   private recordSeconds: number | null = null;
@@ -319,12 +323,24 @@ export class Overlay {
     this.readings.classList.toggle('idle', m.sinceVoice > 4);
     const key: Key | '' = cue.kind ? CUE_KEY[cue.kind] : cue.fine ? 'cueFine' : '';
     const tint = cue.severity.toFixed(3);
+    // A new line never snaps in: the old one fades out first, then the new one fades up.
+    const now = performance.now();
+    let swap = false;
+    if (key !== this.cueKey) {
+      if (!this.cueFadeSince) this.cueFadeSince = now;
+      else if (now - this.cueFadeSince >= CUE_FADE_MS) { swap = true; this.cueFadeSince = 0; }
+    } else {
+      this.cueFadeSince = 0;
+    }
     for (const el of this.cues) {
-      if (key !== this.cueKey) el.textContent = key ? t(key) : '';
-      el.classList.toggle('fine', cue.fine);
+      if (swap) {
+        el.textContent = key ? t(key) : '';
+        el.classList.toggle('fine', cue.fine);
+      }
+      el.classList.toggle('out', this.cueFadeSince > 0);
       el.style.setProperty('--sev', tint);
     }
-    this.cueKey = key;
+    if (swap) this.cueKey = key;
     const recent = m.sinceVoice < 4;
     this.set('volume', tStatus(m.status.volume), Math.abs(m.volume));
     this.set('pace', recent ? `${tStatus(m.status.pace)} ${m.rate.toFixed(1)}/s` : tStatus(m.status.pace), m.pace);

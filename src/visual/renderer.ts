@@ -11,7 +11,7 @@ export const palette = {
 
 const UNIFORMS = [
   'u_res', 'u_time', 'u_size', 'u_breath', 'u_split', 'u_agit', 'u_aurora', 'u_grain',
-  'u_strain', 'u_voice', 'u_pulse', 'u_calm', 'u_warm', 'u_hot', 'u_bg',
+  'u_strain', 'u_voice', 'u_pulse', 'u_shift', 'u_calm', 'u_warm', 'u_hot', 'u_bg',
 ] as const;
 type UniformName = (typeof UNIFORMS)[number];
 
@@ -70,7 +70,8 @@ export class Renderer {
     this.gl.viewport(0, 0, w, h);
   }
 
-  render(time: number, p: VisualParams): void {
+  // shiftY moves the body up (positive) or down, in units of the short screen axis.
+  render(time: number, p: VisualParams, shiftY = 0): void {
     const gl = this.gl;
     const u = this.u;
     gl.uniform2f(u.u_res, this.width, this.height);
@@ -84,6 +85,7 @@ export class Renderer {
     gl.uniform1f(u.u_strain, p.strain);
     gl.uniform1f(u.u_voice, p.voice);
     gl.uniform1f(u.u_pulse, p.pulse);
+    gl.uniform2f(u.u_shift, 0, shiftY);
     gl.uniform3fv(u.u_calm, palette.calm);
     gl.uniform3fv(u.u_warm, palette.warm);
     gl.uniform3fv(u.u_hot, palette.hot);
