@@ -428,9 +428,12 @@ export class MetricsTracker {
     const paceRun = recent ? rampUp(this.run, cfg.runSteadySec, cfg.runFastSec) : 0;
     const pace = Math.max(paceRate, paceRun);
     const voices = this.overlap;
-    // Noise is judged inside the speech band: traffic rumble, ventilation and a laptop fan live
-    // mostly below 300 Hz and raise the broadband floor without masking a word.
-    const noise = warmingUp ? 0 : rampUp(this.speechFloor - this.speechBandRef, cfg.noiseQuietDb, cfg.noiseLoudDb);
+    // Noise inside the speech band is what masks words. Rumble from traffic, ventilation or a fan
+    // lives mostly below 300 Hz and masks nothing, but it still tires a listener, so the broadband
+    // floor counts as well, judged with more headroom. The worse of the two is the reading.
+    const noiseBand = rampUp(this.speechFloor - this.speechBandRef, cfg.noiseQuietDb, cfg.noiseLoudDb);
+    const noiseWide = rampUp(this.noiseFloor - this.speechRef, cfg.noiseWideQuietDb, cfg.noiseWideLoudDb);
+    const noise = warmingUp ? 0 : Math.max(noiseBand, noiseWide);
     const snr = this.speechPeak - this.speechFloor;
     const snrBad = recent ? rampDown(snr, cfg.snrGood, cfg.snrBad) : 0;
     const strainRaw = 1 - (1 - 0.7 * Math.max(quiet01, loud01)) * (1 - 0.8 * pace) * (1 - voices) * (1 - 0.8 * noise) * (1 - 0.6 * snrBad);

@@ -48,11 +48,14 @@ Keys in the app: `t` tune panel, `h` hide all chrome (projection), `f` fullscree
   of the last 10 s of frames that are non-speech by the model, unpitched, and
   not right after speech, plus a fast path that jumps the floor within about
   2 s when those frames rise together with a tight spread (steady noise).
-  The noise reading compares the floor inside the speech band (300 to 3400 Hz)
-  with the loud part of the room's normal speech in that band (`speechPeak`, an
-  80th percentile over the last 3 s of talk), so traffic rumble, ventilation
-  and a laptop fan do not count and a laptop mic across the table reads a fine
-  room as "low" (about 18 dB of headroom in the 2026-09-14 recordings).
+  The noise reading is the worse of two terms. Inside the speech band (300 to
+  3400 Hz): the floor against the loud part of the room's normal speech in that
+  band (`speechPeak`, an 80th percentile over the last 3 s of talk); this is
+  what masks words. Broadband: the whole floor against `speechRef`, with more
+  headroom (`noiseWideQuietDb`), so traffic rumble, ventilation and a fan still
+  register as tiring even though they hide no word. A laptop mic across the
+  table reads a fine room as "clear" on both (about 18 dB and 17 dB of headroom
+  in the 2026-09-14 recordings).
   Syllable rate = peaks of the intensity contour (2 dB dips, pitched frames,
   while speech is on), smoothed over `paceSmoothSec`. Overlap = the model's
   overlap share, attack 0.5 s, release 1.5 s. Without the models (load failure)

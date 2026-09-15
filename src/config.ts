@@ -54,13 +54,18 @@ export const cfg = {
   jumpLow: 1.5,              // pitch jumps per second
   jumpHigh: 5,
 
-  // Background noise: the floor inside the speech band (300 to 3400 Hz), in dB relative to the
-  // loud part of the room's normal speech in that band. Rumble from traffic, ventilation or a
-  // laptop fan stays out; hiss and chatter count. A laptop mic across the table gives a fine
-  // room about 18 dB of headroom (recordings of 2026-09-14); under 12 dB a listener with
-  // hearing loss is losing words.
+  // Background noise, two ways. Inside the speech band (300 to 3400 Hz): the floor in dB
+  // relative to the loud part of the room's normal speech in that band. This is what masks
+  // words. A laptop mic across the table gives a fine room about 18 dB of headroom (recordings
+  // of 2026-09-14); under 12 dB a listener with hearing loss is losing words.
   noiseQuietDb: -18,
   noiseLoudDb: -10,
+  // Broadband: the whole floor relative to the room's normal speech level. Rumble from traffic,
+  // ventilation or a fan masks no word but still tires a listener (and a hearing aid amplifies
+  // it), so it counts too. The same fine room sits about 17 dB under; a fan 9 dB under
+  // reads "noisy" and asks the table for less background noise.
+  noiseWideQuietDb: -15,
+  noiseWideLoudDb: -5,
   snrGood: 18,
   snrBad: 8,
 

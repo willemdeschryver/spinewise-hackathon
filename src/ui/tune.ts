@@ -66,6 +66,8 @@ export function createTunePane(container: HTMLElement, live: Live, actions: Tune
   vol.addBinding(cfg, 'volLoudDb', { min: 0, max: 30, step: 1 });
   vol.addBinding(cfg, 'noiseQuietDb', { min: -50, max: -5, step: 1 });
   vol.addBinding(cfg, 'noiseLoudDb', { min: -30, max: 5, step: 1 });
+  vol.addBinding(cfg, 'noiseWideQuietDb', { min: -40, max: 0, step: 1 });
+  vol.addBinding(cfg, 'noiseWideLoudDb', { min: -30, max: 10, step: 1 });
   vol.addBinding(cfg, 'snrGood', { min: 5, max: 40, step: 1 });
   vol.addBinding(cfg, 'snrBad', { min: 0, max: 20, step: 1 });
   vol.addBinding(cfg, 'floorWindowSec', { min: 3, max: 40, step: 1 });

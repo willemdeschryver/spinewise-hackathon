@@ -130,7 +130,7 @@ const tour: Record<Lang, TourStep[]> = {
     },
     {
       title: 'Noise lights an aurora',
-      text: 'When background noise masks the speech, an aurora lights up around the body and its surface goes gritty. The clearer the room, the darker and stiller the sky around it. Only noise inside the speech band counts: ventilation, traffic and a laptop fan stay invisible until they cover words. Whatever the cause, the colour moves from mint to amber to red as the room gets harder.',
+      text: 'When background noise masks the speech, an aurora lights up around the body and its surface goes gritty. The clearer the room, the darker and stiller the sky around it. Noise that sits on top of the voices weighs heaviest, because it hides words. Ventilation, traffic and a fan count too, since they tire the listener even when every word gets through. Whatever the cause, the colour moves from mint to amber to red as the room gets harder.',
       control: 'noise', low: 'clear', high: 'very noisy', pose: 0.85,
     },
     {
@@ -174,7 +174,7 @@ const tour: Record<Lang, TourStep[]> = {
     },
     {
       title: 'Lawaai ontsteekt een noorderlicht',
-      text: 'Als achtergrondlawaai de spraak overstemt, licht er een noorderlicht op rond het lichaam en wordt het oppervlak korrelig. Hoe helderder de ruimte, hoe donkerder en stiller de lucht eromheen. Alleen lawaai in de spraakband telt: ventilatie, verkeer en een laptopventilator blijven onzichtbaar tot ze woorden bedekken. Wat de oorzaak ook is, de kleur schuift van mint naar oranje naar rood naarmate de ruimte lastiger wordt.',
+      text: 'Als achtergrondlawaai de spraak overstemt, licht er een noorderlicht op rond het lichaam en wordt het oppervlak korrelig. Hoe helderder de ruimte, hoe donkerder en stiller de lucht eromheen. Lawaai dat over de stemmen heen ligt, weegt het zwaarst, omdat het woorden verbergt. Ventilatie, verkeer en een ventilator tellen ook mee, want die vermoeien de luisteraar zelfs als elk woord doorkomt. Wat de oorzaak ook is, de kleur schuift van mint naar oranje naar rood naarmate de ruimte lastiger wordt.',
       control: 'noise', low: 'helder', high: 'veel lawaai', pose: 0.85,
     },
     {
