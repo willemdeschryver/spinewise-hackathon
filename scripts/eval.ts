@@ -159,11 +159,11 @@ async function timeline(name: string, binSec = 2): Promise<void> {
   const segMs = all.filter((m) => m.segMs > 0).map((m) => m.segMs);
   const meanSegMs = segMs.length ? segMs.reduce((a, b) => a + b, 0) / segMs.length : 0;
   console.log(`\n== ${path.basename(name, '.wav')}  (${(all.length / fps).toFixed(1)} s)  ${useModels ? `models on, segmentation ${meanSegMs.toFixed(0)} ms per ${cfg.segWindowSec} s window` : 'heuristics only'}`);
-  console.log('  t   speech  floor   rate    vad  ovlp   spk  voice   vol  pace  noise strain  statuses');
+  console.log('  t   speech  floor sfloor   peak   rate    vad  ovlp   spk  voice   vol  pace  noise strain  statuses');
   bins.forEach((rows, b) => {
     if (!rows) return;
     console.log(
-      `${String(b * binSec).padStart(3)} ${avg(rows, 'speechLevel')} ${avg(rows, 'noiseFloor')} ${avg(rows, 'rate')} ${avg(rows, 'vad')} ${avg(rows, 'overlap', 5)} ${avg(rows, 'speakers', 5)} ${avg(rows, 'voice')} ${avg(rows, 'volume')} ${avg(rows, 'pace', 5)} ${avg(rows, 'noise', 6)} ${avg(rows, 'strain')}  ${mode(rows, 'volume')} / ${mode(rows, 'pace')} / ${mode(rows, 'voices')} / ${mode(rows, 'noise')}`,
+      `${String(b * binSec).padStart(3)} ${avg(rows, 'speechLevel')} ${avg(rows, 'noiseFloor')} ${avg(rows, 'speechFloor')} ${avg(rows, 'speechPeak')} ${avg(rows, 'rate')} ${avg(rows, 'vad')} ${avg(rows, 'overlap', 5)} ${avg(rows, 'speakers', 5)} ${avg(rows, 'voice')} ${avg(rows, 'volume')} ${avg(rows, 'pace', 5)} ${avg(rows, 'noise', 6)} ${avg(rows, 'strain')}  ${mode(rows, 'volume')} / ${mode(rows, 'pace')} / ${mode(rows, 'voices')} / ${mode(rows, 'noise')}`,
     );
   });
 }

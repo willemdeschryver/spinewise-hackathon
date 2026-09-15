@@ -5,6 +5,8 @@ import { cfg } from '../config';
 export interface Live {
   level: number;
   noiseFloor: number;
+  speechFloor: number;
+  speechPeak: number;
   speechLevel: number;
   vad: number;
   rate: number;
@@ -34,6 +36,8 @@ export function createTunePane(container: HTMLElement, live: Live, actions: Tune
   graph('level', -90, 0);
   graph('speechLevel', -90, 0);
   graph('noiseFloor', -90, 0);
+  graph('speechFloor', -90, 0);
+  graph('speechPeak', -90, 0);
   graph('vad', 0, 1);
   graph('rate', 0, 9);
   graph('overlap', 0, 1);

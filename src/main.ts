@@ -122,7 +122,7 @@ const overlay = new Overlay({
 
 const tuneHost = document.getElementById('tune') as HTMLElement;
 const live: Live = {
-  level: -90, noiseFloor: -90, speechLevel: -90, vad: 0, rate: 0, clarity: 0, overlap: 0, speakers: 0,
+  level: -90, noiseFloor: -90, speechFloor: -90, speechPeak: -90, speechLevel: -90, vad: 0, rate: 0, clarity: 0, overlap: 0, speakers: 0,
   segMs: 0, f0: 0, second: 0, fill: 0, strain: 0,
 };
 const pane = createTunePane(tuneHost, live, {
@@ -144,6 +144,8 @@ const frame = (now: number): void => {
   if (recChunks) overlay.setRecording((now - recStart) / 1000);
   live.level = metrics.level;
   live.noiseFloor = metrics.noiseFloor;
+  live.speechFloor = metrics.speechFloor;
+  live.speechPeak = metrics.speechPeak;
   live.speechLevel = metrics.speechLevel;
   live.vad = metrics.vad;
   live.rate = metrics.rate;

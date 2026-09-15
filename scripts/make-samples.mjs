@@ -186,7 +186,7 @@ const clips = {
   ])),
   noisy: (() => {
     const v = normalized(voice.david_calm2, -24);
-    return mix([{ x: v }, { x: pink(v.length, -30) }, { x: hum(v.length, -36) }]);
+    return mix([{ x: v }, { x: pink(v.length, -27) }, { x: hum(v.length, -36) }]);
   })(),
 };
 
@@ -205,7 +205,7 @@ const clips = {
   add(normalized(voice.zira_calm, -25), [{ x: normalized(voice.bart_calm, -25), at: 1.0 }]);
   const noisyVoice = normalized(voice.david_calm2, -24);
   const noiseLen = noisyVoice.length + sec(1.0);
-  add(noisyVoice, [{ x: fade(pink(noiseLen, -30), 800), at: -0.5 }, { x: fade(hum(noiseLen, -36), 800), at: -0.5 }]);
+  add(noisyVoice, [{ x: fade(pink(noiseLen, -27), 800), at: -0.5 }, { x: fade(hum(noiseLen, -36), 800), at: -0.5 }]);
   add(normalized(voice.zira_calm2, -24));
   clips.story = withFloor(mix(seg, sec(t + 0.5)));
 }

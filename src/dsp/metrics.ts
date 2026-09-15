@@ -9,7 +9,9 @@ export interface Metrics {
   speechLevel: number;  // level of recent speech, dBFS
   speechRef: number;    // the room's normal speech level, dBFS; volume and noise are judged against it
   noiseFloor: number;   // broadband floor, dBFS
-  snr: number;          // speechLevel minus noiseFloor, dB
+  speechFloor: number;  // floor inside the speech band (300 to 3400 Hz), dBFS; the noise reading uses this
+  speechPeak: number;   // loud part of recent speech in that band (80th percentile of the last 3 s of talk), dBFS
+  snr: number;          // speechPeak minus speechFloor, dB: what a listener actually has to work with
   voice: number;        // 0..1 someone is speaking
   sinceVoice: number;   // seconds since the last speech
   vad: number;          // 0..1 speech probability of the newest frame (Silero)
@@ -81,6 +83,16 @@ export class MetricsTracker {
   private speechRef = -30;
   private refSec = 0;
   private speechBandLevel = -34;
+  // Loud part of speech in the speech band: the 80th percentile of the in-band level over the
+  // last 3 s of talk. A plain average sits 6 to 10 dB lower because it includes every dip
+  // between words, and the mic's own hiss then looks like a noisy room.
+  private readonly peakN: number;
+  private readonly peakHist: Float32Array;
+  private peakPos = 0;
+  private peakLen = 0;
+  private peakTick = 0;
+  private speechPeak = -30;
+  private speechBandRef = -30;
   private sinceVoice = 99;
   private voiceRaw = 0;
   private voice = 0;
@@ -130,11 +142,13 @@ export class MetricsTracker {
     this.fastN = Math.max(10, Math.round(2 * fps));
     this.fastLevel = new Float32Array(this.fastN).fill(GATED);
     this.fastSpeech = new Float32Array(this.fastN).fill(GATED);
+    this.peakN = Math.max(10, Math.round(3 * fps));
+    this.peakHist = new Float32Array(this.peakN).fill(-80);
   }
 
   static idle(): Metrics {
     return {
-      level: -80, speechLevel: -80, speechRef: -30, noiseFloor: -80, snr: 0, voice: 0, sinceVoice: 99, vad: 0,
+      level: -80, speechLevel: -80, speechRef: -30, noiseFloor: -80, speechFloor: -80, speechPeak: -80, snr: 0, voice: 0, sinceVoice: 99, vad: 0,
       rate: 0, run: 0, overlap: 0, speakers: 0, segAge: 99, segMs: 0, neural: false,
       f0: 0, clarity: 0, entropy: 0, second: 0, envRange: 0, rangeRef: 0, fill: 0, floorSpread: 0,
       volume: 0, pace: 0, voices: 0, noise: 0, snrBad: 0, strain: 0,
@@ -162,6 +176,7 @@ export class MetricsTracker {
   // adaptation so a quiet or loud speaker afterwards does not drag it along.
   calibrateSpeech(): void {
     this.speechRef = this.speechLevel;
+    this.speechBandRef = this.speechPeak;
     this.refSec = 99;
   }
 
@@ -240,10 +255,20 @@ export class MetricsTracker {
       this.sinceVoice = 0;
       this.speechLevel += alpha(dt, 1.0) * (f.levelDb - this.speechLevel);
       this.speechBandLevel += alpha(dt, 1.0) * (f.speechDb - this.speechBandLevel);
+      this.peakHist[this.peakPos] = f.speechDb;
+      this.peakPos = (this.peakPos + 1) % this.peakN;
+      this.peakLen = Math.min(this.peakLen + 1, this.peakN);
+      if (++this.peakTick >= 6) {
+        this.peakTick = 0;
+        const pk = this.percentile(this.peakHist, this.peakLen, 0.8, 0);
+        if (pk !== null) this.speechPeak += alpha(6 * dt, 0.5) * (pk - this.speechPeak);
+      }
       // The room's normal speech level, learnt from the first seconds of talk and then drifting
       // slowly. Microphone gain differs per device, so volume and noise are judged against this.
       this.refSec += dt;
-      this.speechRef += alpha(dt, this.refSec < 4 ? 0.7 : 20) * (this.speechLevel - this.speechRef);
+      const aRef = alpha(dt, this.refSec < 4 ? 0.7 : 20);
+      this.speechRef += aRef * (this.speechLevel - this.speechRef);
+      this.speechBandRef += aRef * (this.speechPeak - this.speechBandRef);
     } else {
       this.sinceVoice += dt;
     }
@@ -374,8 +399,10 @@ export class MetricsTracker {
     const paceRun = recent ? rampUp(this.run, cfg.runSteadySec, cfg.runFastSec) : 0;
     const pace = Math.max(paceRate, paceRun);
     const voices = this.overlap;
-    const noise = warmingUp ? 0 : rampUp(this.noiseFloor - this.speechRef, cfg.noiseQuietDb, cfg.noiseLoudDb);
-    const snr = this.speechLevel - this.noiseFloor;
+    // Noise is judged inside the speech band: traffic rumble, ventilation and a laptop fan live
+    // mostly below 300 Hz and raise the broadband floor without masking a word.
+    const noise = warmingUp ? 0 : rampUp(this.speechFloor - this.speechBandRef, cfg.noiseQuietDb, cfg.noiseLoudDb);
+    const snr = this.speechPeak - this.speechFloor;
     const snrBad = recent ? rampDown(snr, cfg.snrGood, cfg.snrBad) : 0;
     const strainRaw = 1 - (1 - 0.7 * Math.max(quiet01, loud01)) * (1 - 0.8 * pace) * (1 - voices) * (1 - 0.8 * noise) * (1 - 0.6 * snrBad);
     this.strain += alpha(dt, 1.2) * (strainRaw - this.strain);
@@ -405,7 +432,7 @@ export class MetricsTracker {
     };
 
     this.last = {
-      level: this.level, speechLevel: this.speechLevel, speechRef: this.speechRef, noiseFloor: this.noiseFloor, snr,
+      level: this.level, speechLevel: this.speechLevel, speechRef: this.speechRef, noiseFloor: this.noiseFloor, speechFloor: this.speechFloor, speechPeak: this.speechPeak, snr,
       voice: this.voice, sinceVoice: this.sinceVoice, vad: this.vadProb, rate: this.rate, run: this.run,
       overlap: this.overlap, speakers: this.speakers,
       segAge: this.seg ? this.t - this.segAt : 99, segMs: this.seg?.ms ?? 0, neural: this.hasVad && segFresh,
