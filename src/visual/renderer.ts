@@ -70,8 +70,8 @@ export class Renderer {
     this.gl.viewport(0, 0, w, h);
   }
 
-  // shiftY moves the body up (positive) or down, in units of the short screen axis.
-  render(time: number, p: VisualParams, shiftY = 0): void {
+  // shiftY moves the body up (positive) or down, shiftX right, in units of the short screen axis.
+  render(time: number, p: VisualParams, shiftY = 0, shiftX = 0): void {
     const gl = this.gl;
     const u = this.u;
     gl.uniform2f(u.u_res, this.width, this.height);
@@ -85,7 +85,7 @@ export class Renderer {
     gl.uniform1f(u.u_strain, p.strain);
     gl.uniform1f(u.u_voice, p.voice);
     gl.uniform1f(u.u_pulse, p.pulse);
-    gl.uniform2f(u.u_shift, 0, shiftY);
+    gl.uniform2f(u.u_shift, shiftX, shiftY);
     gl.uniform3fv(u.u_calm, palette.calm);
     gl.uniform3fv(u.u_warm, palette.warm);
     gl.uniform3fv(u.u_hot, palette.hot);

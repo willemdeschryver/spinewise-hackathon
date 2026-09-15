@@ -1,0 +1,100 @@
+/* The pitch deck: the app's own stylesheet does the work, this only places the slide text
+   where the start card sits and sizes it for a projector. */
+
+.deck .top .actions a { text-decoration: none; }
+
+/* Only the bottom strip, as the audience faces one screen. All four come back on the slide
+   about the edges, so the table layout is shown as it really is. */
+.deck .edge[data-side='top'], .deck .edge[data-side='left'], .deck .edge[data-side='right'] { display: none; }
+.deck.edges .edge[data-side='top'], .deck.edges .edge[data-side='left'], .deck.edges .edge[data-side='right'] { display: flex; }
+.deck.edges .slide-inner { max-width: min(520px, calc(100vw - 2 * var(--edge))); }
+
+.slide {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.slide-inner {
+  position: absolute;
+  left: var(--edge);
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(560px, calc(100vw - 2 * var(--edge)));
+  pointer-events: auto;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.slide-inner.out {
+  opacity: 0;
+  transform: translateY(calc(-50% + 10px));
+  transition-duration: 0.3s;
+}
+
+.slide h1 {
+  font-size: clamp(30px, 3.4vw, 52px);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 8px 0 16px;
+  text-wrap: balance;
+}
+.slide-inner.cover h1 {
+  font-size: clamp(56px, 9vw, 132px);
+  letter-spacing: -0.035em;
+  margin: 2px 0 14px;
+}
+.slide p {
+  font-size: clamp(16px, 1.25vw, 20px);
+  color: var(--soft);
+  max-width: 46ch;
+  margin: 0 0 20px;
+}
+.slide-inner.cover p:not(.hint) { font-size: clamp(18px, 1.6vw, 26px); color: var(--ink); max-width: 30ch; }
+.slide .hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+.slide-list {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.slide-list li {
+  position: relative;
+  padding-left: 20px;
+  font-size: clamp(15px, 1.15vw, 18px);
+  color: var(--soft);
+  max-width: 50ch;
+}
+.slide-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--calm);
+}
+.slide-list b { color: var(--ink); font-weight: 600; }
+.slide .start-actions a { text-decoration: none; }
+
+.deck.bare .top { opacity: 0; pointer-events: none; }
+
+@media (max-width: 640px), (max-height: 500px) {
+  .slide-inner {
+    left: 16px;
+    right: 16px;
+    top: auto;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    width: auto;
+    transform: none;
+  }
+  .slide-inner.out { transform: translateY(10px); }
+  .slide h1 { font-size: 26px; }
+  .slide-inner.cover h1 { font-size: 56px; }
+  .slide p, .slide-list li { font-size: 15px; }
+  .top .actions { margin-left: auto; }
+}
